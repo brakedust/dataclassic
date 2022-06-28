@@ -86,33 +86,29 @@ import sqlite3
 import uuid
 from warnings import warn
 
-from .dataclasses import asdict, is_dataclass
-from .encoders import JsonEncoder, ZlibEncoder
-from .sql_helper import Column, KoalaRelationship, dialects
-from .sql_helper import sqlite_dialect as dialect
-
-# from collections import OrderedDict
-
-#from .orm import KoalaRelationship
-    #RenderTable, sqlite_type_map as db_type_map
+from dataclassic.dataclasses import asdict, is_dataclass
+from dataclassic.encoders import JsonEncoder, ZlibEncoder
+from dataclassic.sql_helper import Column, Relationship, dialects
+from dataclassic.sql_helper import sqlite_dialect as dialect
 
 
 COLLECTION_SCHEMA = [
-    Column(name='ID', dtype='CHAR(32)', nullable=False, primary_key=True),
-    Column(name='Document', dtype='Text', nullable=False)
-    ]
+    Column(name="ID", dtype="CHAR(32)", nullable=False, primary_key=True),
+    Column(name="Document", dtype="Text", nullable=False),
+]
 
 
 class DocumentStoreNotFound(Exception):
     """
     An exception rasied when a collection is not found in a database
     """
+
     pass
 
-class Row(sqlite3.Row):
 
+class Row(sqlite3.Row):
     def __str__(self):
-        return 'Row({0})'.format(str({k: self[k] for k in self}))
+        return "Row({0})".format(str({k: self[k] for k in self}))
 
     def __repr__(self):
         return str(self)
@@ -123,26 +119,22 @@ class Database(object):
     Abstraction for sqlite database that can contain 'nosql' type JSON document stores.
     The @Database object provides methods that will be common across collections.
     """
+
     def __init__(self, connection_string, conn=None, encoder=JsonEncoder):
 
-        dialect_name = connection_string.partition(':///')[0]
+        dialect_name = connection_string.partition(":///")[0]
         self.dialect = dialects[dialect_name]()
 
         if conn is None:
-            db_connection_string = connection_string.partition(':///')[-1]
+            db_connection_string = connection_string.partition(":///")[-1]
             self.conn = self.dialect.connect(db_connection_string)
         else:
             self.conn = conn
 
         self.connection_string = connection_string
-        #self.cursor = self.conn.cursor()
-        #self.collections = self._get_collections()
         self.conn.row_factory = sqlite3.Row
-        self.conn.create_function('field', 2, self._field)
-        # self.cursor = self.conn.cursor()
+        self.conn.create_function("field", 2, self._field)
         self.encoder = encoder()
-
-        #self.collections = {c[11:]:DocumentStore(c[11:], db=self) for c in self.collection_tables()}
 
     def cursor(self):
         """
@@ -154,7 +146,7 @@ class Database(object):
         """
         Establish a connection to the database
         """
-        db_connection_string = self.connection_string.partition(':///')[-1]
+        db_connection_string = self.connection_string.partition(":///")[-1]
         self.conn = self.dialect.connect(db_connection_string)
 
     def close(self):
@@ -205,14 +197,14 @@ class Database(object):
         """
         Gets a list of tables that are collections (JSON document stores)
         """
-        #c = [t for t in self.tables() if t.lower().startswith('collection_')]
+        # c = [t for t in self.tables() if t.lower().startswith('collection_')]
         # self.cursor.execute("select name from sqlite_master where type='table'" \
         #     "and name like 'collection_%'")
 
         col = []
         for c in self.tables():
-            if c.startswith('collection'):
-                collection_name = c.partition('_')[2]
+            if c.startswith("collection"):
+                collection_name = c.partition("_")[2]
                 col.append(DocumentStore(collection_name, self))
         return col
 
@@ -224,18 +216,20 @@ class Database(object):
             if (c.name == collection_name) or (c.table_name == collection_name):
                 return c
 
-        raise DocumentStoreNotFound('A collection with the specified name {0} does not exist.'.format(
-            collection_name))
-
+        raise DocumentStoreNotFound(
+            "A collection with the specified name {0} does not exist.".format(
+                collection_name
+            )
+        )
 
     def table_exists(self, table_name):
         """
         Tells if a given table exists in the database
         """
-        #self.cursor.execute("select name from sqlite_master where type='table' and name='?';", table_name)
+        # self.cursor.execute("select name from sqlite_master where type='table' and name='?';", table_name)
         return table_name in self.tables()
 
-    #def create_function(self, name, param_count, func):
+    # def create_function(self, name, param_count, func):
     #    self.conn.create_function(name, param_count, func)
 
     def encode(self, val):
@@ -267,7 +261,7 @@ class Database(object):
         val = self.decode(val)
 
         if "." in f:
-            fs = f.split('.')
+            fs = f.split(".")
             retval = val
             for ifs in fs:
                 # recursively look up members
@@ -297,46 +291,49 @@ class Database(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
+
 def opcodes(code):
     """
     Gets the function that should be used to evaluate the given constraint type
     """
-    codes = {  "$and": ('and', _render_compound_op),
-               "and": ('and', _render_compound_op),
-               "$in": ("in", _render_list_op),
-               "in": ("in", _render_list_op),
-               "$or": ("or", _render_compound_op),
-               "or": ("or", _render_compound_op),
-               "&like": ("like", _render_compare_op),
-               "like": ("like", _render_compare_op),
-               "$nin": ("not in", _render_list_op),
-               "not in": ("not in", _render_list_op),
-               "$between": ("between", _render_list_op),
-               "between": ("between", _render_list_op),
-               "$null": ("is null", render_simple_op),
-               "null": ("is null", render_simple_op),
-               "$nnull": ("is not null", render_simple_op),
-               "not null": ("is not null", render_simple_op),
-               "$gt": (">", _render_compare_op),
-               "gt": (">", _render_compare_op),
-               ">": (">", _render_compare_op),
-               "$gte": (">=", _render_compare_op),
-               "gte": (">=", _render_compare_op),
-               ">=": (">=", _render_compare_op),
-               "$lt": ("<", _render_compare_op),
-               "lt": ("<", _render_compare_op),
-               "<": ("<", _render_compare_op),
-               "$lte": ("<=", _render_compare_op),
-               "lte": ("<=", _render_compare_op),
-               "<=": ("<=", _render_compare_op),
-               "$ne": ("<>", _render_compare_op),
-               "ne": ("<>", _render_compare_op),
-               "<>": ("<>", _render_compare_op),
-               "!=": ("<>", _render_compare_op),
-               "$eq": ("=", _render_compare_op),
-               "eq": ("=", _render_compare_op),
-               "=": ("=", _render_compare_op),
-               "==": ("=", _render_compare_op)}
+    codes = {
+        "$and": ("and", _render_compound_op),
+        "and": ("and", _render_compound_op),
+        "$in": ("in", _render_list_op),
+        "in": ("in", _render_list_op),
+        "$or": ("or", _render_compound_op),
+        "or": ("or", _render_compound_op),
+        "&like": ("like", _render_compare_op),
+        "like": ("like", _render_compare_op),
+        "$nin": ("not in", _render_list_op),
+        "not in": ("not in", _render_list_op),
+        "$between": ("between", _render_list_op),
+        "between": ("between", _render_list_op),
+        "$null": ("is null", render_simple_op),
+        "null": ("is null", render_simple_op),
+        "$nnull": ("is not null", render_simple_op),
+        "not null": ("is not null", render_simple_op),
+        "$gt": (">", _render_compare_op),
+        "gt": (">", _render_compare_op),
+        ">": (">", _render_compare_op),
+        "$gte": (">=", _render_compare_op),
+        "gte": (">=", _render_compare_op),
+        ">=": (">=", _render_compare_op),
+        "$lt": ("<", _render_compare_op),
+        "lt": ("<", _render_compare_op),
+        "<": ("<", _render_compare_op),
+        "$lte": ("<=", _render_compare_op),
+        "lte": ("<=", _render_compare_op),
+        "<=": ("<=", _render_compare_op),
+        "$ne": ("<>", _render_compare_op),
+        "ne": ("<>", _render_compare_op),
+        "<>": ("<>", _render_compare_op),
+        "!=": ("<>", _render_compare_op),
+        "$eq": ("=", _render_compare_op),
+        "eq": ("=", _render_compare_op),
+        "=": ("=", _render_compare_op),
+        "==": ("=", _render_compare_op),
+    }
 
     return codes[code]
 
@@ -356,6 +353,7 @@ def render_op(d):
     render_func = opcodes(opname)[1]
     return render_func(func_str, d[opname])
 
+
 def _render_compare_op(func_str, children):
     """
     Renders a simple compare op to sql
@@ -365,7 +363,7 @@ def _render_compare_op(func_str, children):
     """
     column_name = list(children.keys())[0]
     value = children[column_name]
-    return "{0} {1} ?".format(column_name, func_str), (value, )
+    return "{0} {1} ?".format(column_name, func_str), (value,)
 
 
 def _render_compound_op(func_str, children):
@@ -395,7 +393,7 @@ def _render_list_op(func_str, children):
     # else:
     #     value = [str(v) for v in value]
     # value = '(' + ",".join(value) + ')'
-    ques = '(' + ','.join(['?']*len(value)) + ')'
+    ques = "(" + ",".join(["?"] * len(value)) + ")"
     return "{0} {1} {2}".format(column_name, func_str, ques), tuple(value)
 
 
@@ -407,8 +405,9 @@ def render_simple_op(func_str, children):
     return column_name + " " + func_str, tuple()
 
 
-
-attribute_regex = re.compile(r'(\@\S+\b)') # an attribute in a query string is preceded by an @ character
+attribute_regex = re.compile(
+    r"(\@\S+\b)"
+)  # an attribute in a query string is preceded by an @ character
 
 
 class DocumentStore(object):
@@ -416,6 +415,7 @@ class DocumentStore(object):
     http://backchannel.org/blog/friendfeed-schemaless-mysql
 
     """
+
     def __init__(self, name, db=None, use_zlib_encoder=False, dtype=None):
         """
         Initializes the collection class
@@ -434,32 +434,31 @@ class DocumentStore(object):
         self.db = db
 
         tables = db.tables()
-        if ('collectionj_' + name) in tables:
-            #table exists and uses a json encoder
-            self.table_name = 'collectionj_' + name
+        if ("collectionj_" + name) in tables:
+            # table exists and uses a json encoder
+            self.table_name = "collectionj_" + name
             self._encoder = JsonEncoder()
-        elif ('collection_' + name) in tables:
-            #table exists and uses a json encoder
-            self.table_name = 'collection_' + name
+        elif ("collection_" + name) in tables:
+            # table exists and uses a json encoder
+            self.table_name = "collection_" + name
             self._encoder = JsonEncoder()
-        elif ('collectionz_' + name) in tables:
-            #tables exists and uses a zlib encoder
-            self.table_name = 'collectionz_' + name
+        elif ("collectionz_" + name) in tables:
+            # tables exists and uses a zlib encoder
+            self.table_name = "collectionz_" + name
             self._encoder = ZlibEncoder()
         else:
-            #table does not exist
+            # table does not exist
             if use_zlib_encoder:
-                self.table_name = 'collectionz_' + name
+                self.table_name = "collectionz_" + name
                 self._encoder = ZlibEncoder()
             else:
-                self.table_name = 'collectionj_' + name
+                self.table_name = "collectionj_" + name
                 self._encoder = JsonEncoder()
 
             self.create()
         # self.db.encoder = self._encoder
         # if not self.table_name in tables:
         #     self.create()
-
 
     def create(self, index_attributes=None):
         """
@@ -511,24 +510,26 @@ class DocumentStore(object):
 
         if index_name in self.db.tables():
             if not suppress_warning:
-                msg = 'Index of attribute {0} on collection {1} not created ' \
-                      'because it already exists.'.format(attribute_name, self.name)
+                msg = (
+                    "Index of attribute {0} on collection {1} not created "
+                    "because it already exists.".format(attribute_name, self.name)
+                )
                 warn(msg)
 
         else:
             IndexSchema = [
-                Column(name='ID', dtype='CHAR(32)', primary_key=True, nullable=False),
-                Column(name=attribute_name, dtype=sqltype, nullable=False)
-                ]
+                Column(name="ID", dtype="CHAR(32)", primary_key=True, nullable=False),
+                Column(name=attribute_name, dtype=sqltype, nullable=False),
+            ]
 
-            fk = KoalaRelationship('ID', self.table_name, 'ID', ondelete='CASCADE')
+            fk = Relationship("ID", self.table_name, "ID", ondelete="CASCADE")
             cmd = dialect.render_table(index_name, IndexSchema, [fk])
-            #print(cmd)
+            # print(cmd)
             self.db.conn.execute(cmd)
 
-            index_cmd = dialect.render_index(name='index_'+index_name,
-                                             table=index_name,
-                                             attribute=attribute_name)
+            index_cmd = dialect.render_index(
+                name="index_" + index_name, table=index_name, attribute=attribute_name
+            )
 
             self.db.conn.execute(index_cmd)
 
@@ -539,15 +540,20 @@ class DocumentStore(object):
         index_name = self.get_index_name(attribute_name)
 
         # cmd_find = 'select ID, @' + attribute_name + ' as ' + attribute_name + ' from ' + self.table_name
-        cmd_find = dialect.render_select(self.table_name,
-                                         dict([('ID', 'ID'),
-                                                      ('@' + attribute_name, attribute_name)]))
+        cmd_find = dialect.render_select(
+            self.table_name,
+            dict([("ID", "ID"), ("@" + attribute_name, attribute_name)]),
+        )
         cmd_find = self._resolve_attributes(cmd_find)
 
-        #cmd_insert1 = 'insert into ' + index_name + '(ID,' + attribute_name + ') values(?,?)'
-        cmd_insert, __ = dialect.render_insert(index_name, dict([('ID', None), (attribute_name, None)]))
-        #cmd_update = 'update ' + index_name + ' set ' + attribute_name + ' = ? where ID = ?'
-        cmd_update, __ = dialect.render_update(index_name, attribute_name, None, 'ID', None)
+        # cmd_insert1 = 'insert into ' + index_name + '(ID,' + attribute_name + ') values(?,?)'
+        cmd_insert, __ = dialect.render_insert(
+            index_name, dict([("ID", None), (attribute_name, None)])
+        )
+        # cmd_update = 'update ' + index_name + ' set ' + attribute_name + ' = ? where ID = ?'
+        cmd_update, __ = dialect.render_update(
+            index_name, attribute_name, None, "ID", None
+        )
 
         # if the index does not exist, infer the type and create it
         if attribute_name not in self.find_indexes():
@@ -558,8 +564,10 @@ class DocumentStore(object):
                 sqltype = dialect.typemap[ty]
                 self.add_index(attribute_name, sqltype)
             except:
-                raise DocumentStoreNotFound('Index "{0}" not found and type '
-                                                  'could not be inferred for auto creation.'.format(index_name))
+                raise DocumentStoreNotFound(
+                    'Index "{0}" not found and type '
+                    "could not be inferred for auto creation.".format(index_name)
+                )
 
         # now do the update
         cursor_find = self.db.conn.execute(cmd_find)
@@ -568,17 +576,17 @@ class DocumentStore(object):
         while result:
 
             for doc in result:
-                #print(*r)
+                # print(*r)
                 try:
                     if echo_sql:
-                        print('Trying Insert:')
-                        print('    ' + cmd_insert, (doc['ID'], doc[attribute_name]))
-                    cursor_insert.execute(cmd_insert, (doc['ID'], doc[attribute_name]))
+                        print("Trying Insert:")
+                        print("    " + cmd_insert, (doc["ID"], doc[attribute_name]))
+                    cursor_insert.execute(cmd_insert, (doc["ID"], doc[attribute_name]))
                 except sqlite3.IntegrityError as err:
                     if echo_sql:
-                        print('Insert failed trying update:')
-                        print('    ' + cmd_insert, (doc['ID'], doc[attribute_name]))
-                    cursor_insert.execute(cmd_update, (doc[attribute_name], doc['ID']))
+                        print("Insert failed trying update:")
+                        print("    " + cmd_insert, (doc["ID"], doc[attribute_name]))
+                    cursor_insert.execute(cmd_update, (doc[attribute_name], doc["ID"]))
 
             result = cursor_find.fetchmany()
 
@@ -586,24 +594,23 @@ class DocumentStore(object):
 
         # update the other.  look for items in the index who no longer have matching items in the
         # collection table
-        cmd_find_index = dialect.render_select(index_name, 'ID')
+        cmd_find_index = dialect.render_select(index_name, "ID")
         cursor_find_index = self.db.conn.execute(cmd_find_index)
         result = cursor_find_index.fetchmany()
-        cmd_find_table = dialect.render_select(self.table_name, 'ID', where='ID = ?')
-        cmd_delete, __ = dialect.render_delete(index_name, 'ID', None)
+        cmd_find_table = dialect.render_select(self.table_name, "ID", where="ID = ?")
+        cmd_delete, __ = dialect.render_delete(index_name, "ID", None)
 
         while result:
-            #loop over rows in the index table
+            # loop over rows in the index table
             for doc in result:
                 # look for rows in the colleciton table with a matching ID
                 inner_cursor = self.db.conn.cursor()
-                inner_cursor.execute(cmd_find_table, (doc['ID'],))
+                inner_cursor.execute(cmd_find_table, (doc["ID"],))
                 inner_result = inner_cursor.fetchone()
                 if not inner_result:
                     # if a matching id is not found, delete the row in the index table
                     # because it nows points to nothing.
-                    inner_cursor.execute(cmd_delete, (doc['ID'],))
-
+                    inner_cursor.execute(cmd_delete, (doc["ID"],))
 
             result = cursor_find_index.fetchmany()
 
@@ -614,9 +621,9 @@ class DocumentStore(object):
         Returns a dict of indexes for this table.  The keys are the attribute names that indexed and
         the values are the names of the index tables.
         """
-        self._indexes = getattr(self, '_indexes', None)
+        self._indexes = getattr(self, "_indexes", None)
         if (not self._indexes) or (relook == True):
-            index_name_regex = re.compile('index_(\S+)_on_' + self.name)
+            index_name_regex = re.compile("index_(\S+)_on_" + self.name)
 
             self._indexes = {}
 
@@ -640,11 +647,13 @@ class DocumentStore(object):
             doc_obj = doc
             doc = asdict(doc_obj)
 
-        doc['ID'] = doc.get('ID', uuid.uuid1().hex)
+        doc["ID"] = doc.get("ID", uuid.uuid1().hex)
 
         encoded_item = self.encode(doc)
-        #cmd1 = 'insert into {n} values(?,?)'.format(n=self.table_name)
-        cmd, params = dialect.render_insert(self.table_name, {'ID': doc['ID'], 'Document': encoded_item})
+        # cmd1 = 'insert into {n} values(?,?)'.format(n=self.table_name)
+        cmd, params = dialect.render_insert(
+            self.table_name, {"ID": doc["ID"], "Document": encoded_item}
+        )
 
         indexes = self.find_indexes()
 
@@ -654,20 +663,28 @@ class DocumentStore(object):
 
                 for attribute_name in indexes:
                     index_name = indexes[attribute_name]
-                    cmd_insert, __ = dialect.render_insert(index_name, dict([('ID', None), (attribute_name, None)]))
-                    conn.execute(cmd_insert, (doc['ID'], doc[attribute_name]))
+                    cmd_insert, __ = dialect.render_insert(
+                        index_name, dict([("ID", None), (attribute_name, None)])
+                    )
+                    conn.execute(cmd_insert, (doc["ID"], doc[attribute_name]))
 
             except sqlite3.IntegrityError as err:
                 if upsert:
-                    #cmd_update = 'update ' + self.table_name + ' set Document = ? where ID = ?'
-                    cmd_update, params = dialect.render_update(self.table_name, 'Document', encoded_item, 'ID', doc['ID'])
+                    # cmd_update = 'update ' + self.table_name + ' set Document = ? where ID = ?'
+                    cmd_update, params = dialect.render_update(
+                        self.table_name, "Document", encoded_item, "ID", doc["ID"]
+                    )
                     conn.execute(cmd_update, params)
                     for attribute_name in indexes:
                         index_name = indexes[attribute_name]
-                        cmd_update, __ = dialect.render_update(index_name, attribute_name, None, 'ID', None)
-                        conn.execute(cmd_update, (doc[attribute_name], doc['ID']))
+                        cmd_update, __ = dialect.render_update(
+                            index_name, attribute_name, None, "ID", None
+                        )
+                        conn.execute(cmd_update, (doc[attribute_name], doc["ID"]))
                 else:
-                    msg = 'Document with id={0} already exists. To update use insert(..,upsert=True)'.format(doc['ID'])
+                    msg = "Document with id={0} already exists. To update use insert(..,upsert=True)".format(
+                        doc["ID"]
+                    )
                     warn(msg)
 
         return doc
@@ -684,21 +701,23 @@ class DocumentStore(object):
         could provide an existing cursor and handle calling commit.  This can lead to performane improvements if
         many inserts and deletes are being done.
         """
-        cmd, __ = dialect.render_insert(self.table_name, dict([('ID', None), ('Document', None)]))
+        cmd, __ = dialect.render_insert(
+            self.table_name, dict([("ID", None), ("Document", None)])
+        )
 
         _docs = []
         for doc in docs:
             if is_dataclass(doc):
                 doc_obj = doc
                 doc = asdict(doc_obj)
-            doc['ID'] = doc.get('ID', uuid.uuid1().hex)
+            doc["ID"] = doc.get("ID", uuid.uuid1().hex)
             _docs.append(doc)
 
         docs = _docs
 
         indexes = self.find_indexes()
 
-        params = tuple([(doc['ID'], self.encode(doc)) for doc in docs])
+        params = tuple([(doc["ID"], self.encode(doc)) for doc in docs])
         if not cursor:
             cursor = self.db.cursor()
 
@@ -707,12 +726,16 @@ class DocumentStore(object):
 
             for attribute_name in indexes:
                 index_name = indexes[attribute_name]
-                index_params = tuple([((doc['ID'], doc[attribute_name])) for doc in docs])
-                cmd_insert, __ = dialect.render_insert(index_name, dict([('ID', None), (attribute_name, None)]))
+                index_params = tuple(
+                    [((doc["ID"], doc[attribute_name])) for doc in docs]
+                )
+                cmd_insert, __ = dialect.render_insert(
+                    index_name, dict([("ID", None), (attribute_name, None)])
+                )
                 cursor.executemany(cmd_insert, index_params)
 
         except sqlite3.IntegrityError:
-            msg = 'Document with id={0} already exists.'
+            msg = "Document with id={0} already exists."
             warn(msg)
 
         if do_commit:
@@ -727,22 +750,24 @@ class DocumentStore(object):
         if is_dataclass(doc):
             uid = doc.ID
         else:
-            uid = doc['ID']
+            uid = doc["ID"]
 
-        #cmd = 'DELETE FROM {t} WHERE ID = ?'
-        cmd_delete, params = dialect.render_delete(self.table_name, 'ID', uid)
+        # cmd = 'DELETE FROM {t} WHERE ID = ?'
+        cmd_delete, params = dialect.render_delete(self.table_name, "ID", uid)
 
         with self.db.conn as conn:
             try:
                 conn.execute(cmd_delete, params)
                 indexes = self.find_indexes()
                 for attribute_name in indexes:
-                    cmd_delete, params = dialect.render_delete(indexes[attribute_name], 'ID', uid)
+                    cmd_delete, params = dialect.render_delete(
+                        indexes[attribute_name], "ID", uid
+                    )
                     conn.execute(cmd_delete, params)
             except Exception as e:
 
-                msg = 'Could not delete document with ID = {0}'.format(id)
-                warn(msg + '\n' + msg)
+                msg = "Could not delete document with ID = {0}".format(id)
+                warn(msg + "\n" + msg)
 
     def delete_many(self, docs, cursor=None, do_commit=False):
         """
@@ -763,12 +788,12 @@ class DocumentStore(object):
         for doc in docs:
             if is_dataclass(doc) and hasattr(doc, "ID"):
                 uids.append(doc.ID)
-            if 'ID' in doc:
-                uids.append((doc['ID'], ))
+            if "ID" in doc:
+                uids.append((doc["ID"],))
         # uids = [(doc['ID'],) for doc in docs]
 
-        #cmd = 'DELETE FROM {t} WHERE ID = ?'
-        cmd, params = dialect.render_delete(self.table_name, 'ID', None)
+        # cmd = 'DELETE FROM {t} WHERE ID = ?'
+        cmd, params = dialect.render_delete(self.table_name, "ID", None)
 
         if cursor is None:
             cursor = self.db.cursor()
@@ -777,12 +802,14 @@ class DocumentStore(object):
             cursor.executemany(cmd, uids)
             indexes = self.find_indexes()
             for attribute_name in indexes:
-                cmd_delete, __ = dialect.render_delete(indexes[attribute_name], 'ID', None)
+                cmd_delete, __ = dialect.render_delete(
+                    indexes[attribute_name], "ID", None
+                )
                 cursor.executemany(cmd_delete, uids)
 
         except Exception as e:
-            msg = 'Could not delete one document in = {0}'.format(uids)
-            warn(msg + '\n' + msg)
+            msg = "Could not delete one document in = {0}".format(uids)
+            warn(msg + "\n" + msg)
 
         if do_commit:
             self.db.conn.commit()
@@ -802,7 +829,7 @@ class DocumentStore(object):
             m = attribute_regex.findall(sql_command)
             for mi in m:
                 sub = 'field(Document, "{f}")'.format(f=mi[1:])
-                sql_command = sql_command.replace(mi,sub)
+                sql_command = sql_command.replace(mi, sub)
 
             return sql_command
 
@@ -812,12 +839,15 @@ class DocumentStore(object):
             for mi in m:
                 attribute = mi[1:]
                 if attribute in indexes.keys():
-                    #the index tables will be joined, so the attribute will be an actual column
-                    sub = '{i}.{f}'.format(i=indexes[attribute], f=attribute)
-                    sqljoins.append(' join {0} on {1}.ID={0}.ID'.format(indexes[attribute],
-                                                                        self.table_name))
+                    # the index tables will be joined, so the attribute will be an actual column
+                    sub = "{i}.{f}".format(i=indexes[attribute], f=attribute)
+                    sqljoins.append(
+                        " join {0} on {1}.ID={0}.ID".format(
+                            indexes[attribute], self.table_name
+                        )
+                    )
                 else:
-                    #the attribute is not indexed, so we must fetch it from the Document
+                    # the attribute is not indexed, so we must fetch it from the Document
                     sub = 'field(document, "{f}")'.format(f=attribute)
                 sql_command = sql_command.replace(mi, sub)
 
@@ -848,22 +878,22 @@ class DocumentStore(object):
 
         """
 
-        cmd = dialect.render_select(table=self.table_name, columns='Document')
+        cmd = dialect.render_select(table=self.table_name, columns="Document")
 
-        #Find JSON fields to include in query and replace them with calls to the field function
-        sqljoin = ''
+        # Find JSON fields to include in query and replace them with calls to the field function
+        sqljoin = ""
         if clause and len(clause) > 0:
             clause, sqljoin = self._resolve_attributes(clause, use_index=True)
-            cmd += sqljoin + ' where ' + clause
+            cmd += sqljoin + " where " + clause
 
-        #apply the record limit
+        # apply the record limit
         if limit is not None:
             cmd += " limit {0}".format(int(limit))
-        #print(cmd)
+        # print(cmd)
 
-        #execute
+        # execute
         if echo_sql:
-            print('sql   ={0}\nparams={1}'.format(cmd, params))
+            print("sql   ={0}\nparams={1}".format(cmd, params))
 
         cursor = self.db.cursor()
         if params:
@@ -871,18 +901,18 @@ class DocumentStore(object):
         else:
             cursor.execute(cmd)
 
-        #now parse the fetched documents
-        results = [self.decode(item['Document']) for item in cursor.fetchall()]
+        # now parse the fetched documents
+        results = [self.decode(item["Document"]) for item in cursor.fetchall()]
 
         dtype = dtype or self.dtype
 
         if dtype is not None:
             from dataclasses import is_dataclass
+
             if is_dataclass(dtype):
                 results = [dtype(**res) for res in results]
 
         return results
-
 
     def find2(self, where=None, limit=None, echo_sql=False):
         """
@@ -905,7 +935,6 @@ class DocumentStore(object):
 
 
 class Find:
-
     def __init__(self, dtype: type):
         self.dtype: type = dtype
 
@@ -925,7 +954,7 @@ class Find:
     def __gt__(self, test_val):
         return self.is_greater_than(test_val)
 
-    def  is_greater_than_or_equal_to(self, test_val):
+    def is_greater_than_or_equal_to(self, test_val):
         self._op = ">="
         self._test_val = test_val
         return self
@@ -941,7 +970,7 @@ class Find:
     def __lt__(self, test_val):
         return self.is_less_than(test_val)
 
-    def  is_less_than_or_equal_to(self, test_val):
+    def is_less_than_or_equal_to(self, test_val):
         self._op = "<="
         self._test_val = test_val
         return self
@@ -949,17 +978,16 @@ class Find:
     def __lte__(self, test_val):
         return self.is_less_than_or_equal_to(test_val)
 
-    def  is_equal_to(self, test_val):
+    def is_equal_to(self, test_val):
         self._op = "<="
         self._test_val = test_val
         return self
 
-    def __eq__(self, test_val: object) -> 'Find':
+    def __eq__(self, test_val: object) -> "Find":
         return self.is_equal_to(test_val)
 
     def __str__(self):
         return f"{self._param_name} {self._op} {self._test_val}"
-
 
 
 # if __name__ == "__main__":

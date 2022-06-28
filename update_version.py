@@ -18,17 +18,25 @@ import subprocess
 
 vstring = subprocess.check_output(["git", "describe"]).decode().strip()
 vstring = vstring.replace("Version", "")
-parts = vstring.split("-")
 
-parts[2] = parts[2][1:]
+if "-" in vstring:
+    parts = vstring.split("-")
 
-vstring = f"{parts[0]}.{parts[1]}"
+    parts[2] = parts[2][1:]
+
+    vstring = f"{parts[0]}.{parts[1]}"
+else:
+    vstring += ".0"
+
 # print(vstring)
 print("----------------\nPoetry")
 subprocess.call(["poetry", "version", vstring])
 print("----------------")
 
-vstring2 = f"{parts[0]}.{parts[1]}+{parts[2]}"
+if "-" in vstring:
+    vstring2 = f"{parts[0]}.{parts[1]}+{parts[2]}"
+else:
+    vstring2 = vstring
 # Path('version.py').write_text(f'VERSION = "{vstring2}"\n')
-Path('lqts/version.py').write_text(f'VERSION = "{vstring2}"\n')
+Path("dataclassic/version.py").write_text(f'VERSION = "{vstring2}"\n')
 print(f'VERSION = "{vstring2}"\n')

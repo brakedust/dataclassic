@@ -3,7 +3,9 @@ class ExceptionNotRaised(Exception):
     An exception raised when an expected exception is not raised.  This should generally
     only be used in the context of unit testing
     """
+
     pass
+
 
 class Raises:
     """
@@ -11,6 +13,7 @@ class Raises:
     It catches and swallows exceptions of certain types.  If the exception is not thrown, then
     a new exception is thrown
     """
+
     def __init__(self, *exception_types):
         self.exception_types = exception_types
         self.raised_exceptions = []
@@ -22,14 +25,18 @@ class Raises:
         import functools
 
         @functools.wraps(func)
-        def wrapper(*args,**kwargs):
+        def wrapper(*args, **kwargs):
 
             try:
                 func(*args, **kwargs)
             except self.exception_types as ex:
                 self.raised_exceptions.append(ex)
-            except:
-                raise ExceptionNotRaised('The expected exception type was not raised {0}'.format(self.exception_types))
+            except:  # nopep8
+                raise ExceptionNotRaised(
+                    "The expected exception type was not raised {0}".format(
+                        self.exception_types
+                    )
+                )
 
         return wrapper
 
@@ -43,5 +50,8 @@ class Raises:
         if exc_type in self.exception_types:
             self.raised_exceptions.append(exc_value)
             return True
-        raise ExceptionNotRaised('The expected exception type was not raised {0}'.format(self.exception_types))
-
+        raise ExceptionNotRaised(
+            "The expected exception type was not raised {0}".format(
+                self.exception_types
+            )
+        )

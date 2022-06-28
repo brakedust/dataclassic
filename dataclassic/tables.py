@@ -12,32 +12,57 @@ from itertools import chain
 from collections import OrderedDict
 from string import ascii_lowercase
 
-backend = 'pyarray'
+backend = "pyarray"
 # backend = 'numpy'
 
-if backend == 'numpy':
+if backend == "numpy":
     try:
-        from numpy import (array, transpose, append, delete, ndarray, copy as array_copy,
-                           min, max, mean, sum, var, std)
+        from numpy import (
+            array,
+            transpose,
+            append,
+            delete,
+            ndarray,
+            copy as array_copy,
+            min,
+            max,
+            mean,
+            sum,
+            var,
+            std,
+        )
+
         array_type = ndarray
     except ImportError:
-        backend = 'pyarray'
+        backend = "pyarray"
 
-if backend == 'pyarray':
-    from koala.pyarray import (array, transpose, append, delete, pyndarray,
-                               min, max, mean, sum, var, std)
+if backend == "pyarray":
+    from dataclassic.pyarray import (
+        array,
+        transpose,
+        append,
+        delete,
+        pyndarray,
+        min,
+        max,
+        mean,
+        sum,
+        var,
+        std,
+    )
+
     array_type = pyndarray
     array_copy = copy.deepcopy
 
 SIG_DIGIT_COUNT = 6
 
 
-def sigdigits(x, n, format_code='g'):
+def sigdigits(x, n, format_code="g"):
     """
     Rounds a number to the specified number of significant digits
     """
     try:
-        fstring = "{0:1." + str(n-1) + format_code + "}"
+        fstring = "{0:1." + str(n - 1) + format_code + "}"
         return float(fstring.format(x))
     except ValueError:
         return str(x)
@@ -72,9 +97,9 @@ def parse_primitive(s):
             pass
 
     if retval is None:
-        if s.lower() == 'true':
+        if s.lower() == "true":
             return True
-        elif s.lower() == 'false':
+        elif s.lower() == "false":
             return False
         else:
             return s
@@ -96,7 +121,9 @@ class DataTable(object):
     Represents a tabular array of data similar to a pandas.DataFrame object
     """
 
-    def __init__(self, data, columns=None, name=None, dtype=object, index=None, fillval=None):
+    def __init__(
+        self, data, columns=None, name=None, dtype=object, index=None, fillval=None
+    ):
         # self.__initializing = True
         self.columns: list[str] = copy.copy(columns)
         self.data: pyndarray = None
@@ -127,9 +154,9 @@ class DataTable(object):
             self.columns = [ascii_lowercase[i] for i in range(len(self.data[0]))]
 
         if self.index is None:
-            index_col = '_index'
+            index_col = "_index"
             if not index_col in self.columns:
-                index_col = 'index'
+                index_col = "index"
             if index_col in self.columns:
                 self.index = self.get_column(index_col)
                 self.drop(index_col)
@@ -138,29 +165,27 @@ class DataTable(object):
                 self.columns.remove(index_col)
             else:
                 self.index = list(range(self.data.shape[0]))
-        #self.__initializing = False
+        # self.__initializing = False
 
-
-
-        #def set_attribute(self, key, value):
+        # def set_attribute(self, key, value):
         #    #if key in self.__dict__:
         #    #    object.__setattr__(key, value)
         #    #else:
         #    self.__setitem__(key, value)
         #
-        #self.__setattr__ = set_attribute
+        # self.__setattr__ = set_attribute
 
-    #@property
-    #def columns(self):
+    # @property
+    # def columns(self):
     #    """
     #    Returns the column names of the DataTable
     #    :return:
     #    """
     #    return self._columns
     #
-    #@TypedSetter((list, set, tuple), allow_none=False)
-    #@columns.setter
-    #def columns(self, value):
+    # @TypedSetter((list, set, tuple), allow_none=False)
+    # @columns.setter
+    # def columns(self, value):
     #    """
     #    Sets the column names of the DataTable
     #    :param value:
@@ -169,7 +194,9 @@ class DataTable(object):
     #    self._columns = value
 
     @staticmethod
-    def from_column_dict(data: dict[str, list], name:str=None, dtype:type=object) -> "DataTable":
+    def from_column_dict(
+        data: dict[str, list], name: str = None, dtype: type = object
+    ) -> "DataTable":
 
         column_names = list(data.keys())
 
@@ -184,7 +211,12 @@ class DataTable(object):
         return DataTable(arr, column_names, name)
 
     @staticmethod
-    def from_row_dicts(data: dict[str, object], name:str=None, fillval:object=None, dtype:type=object) -> "DataTable":
+    def from_row_dicts(
+        data: dict[str, object],
+        name: str = None,
+        fillval: object = None,
+        dtype: type = object,
+    ) -> "DataTable":
 
         columns = list(data[0].keys())  # get column names from first item
 
@@ -195,7 +227,9 @@ class DataTable(object):
             if c not in columns:
                 columns.append(c)
 
-        data_list = array([[row.get(c, fillval) for c in columns] for row in data], dtype=dtype)
+        data_list = array(
+            [[row.get(c, fillval) for c in columns] for row in data], dtype=dtype
+        )
         return DataTable(data_list, columns, name=name)
 
     def add_row(self, newrow: list) -> "DataTable":
@@ -205,11 +239,14 @@ class DataTable(object):
         :return:
         """
         if len(newrow) != len(self.data[0]):
-            raise ValueError('New row must be same length as the existing rows')
+            raise ValueError("New row must be same length as the existing rows")
         else:
-            #self.data.append(newrow)
-            return DataTable(append(self.data, [newrow], axis=0), columns=self.columns, name=self.name)
-
+            # self.data.append(newrow)
+            return DataTable(
+                append(self.data, [newrow], axis=0),
+                columns=self.columns,
+                name=self.name,
+            )
 
     def __getitem__(self, args):
         """
@@ -217,11 +254,11 @@ class DataTable(object):
         :param args:
         :return:
         """
-        #if isinstance(args, slice):
+        # if isinstance(args, slice):
         #    return DataTable(self.data[args], columns=self.columns)
-        #if isinstance(args, int):
+        # if isinstance(args, int):
         #    return DataTable([self.data[args]], columns=self.columns)
-        #else:
+        # else:
         return self.get_column(args)
 
     def __setitem__(self, key, values):
@@ -240,32 +277,29 @@ class DataTable(object):
         return self.data.shape[0]
 
     def __getattr__(self, item):
-        if ('columns' in self.__dict__) and (item in self.__dict__['columns']):
+        if ("columns" in self.__dict__) and (item in self.__dict__["columns"]):
             return self.get_column(item)
         elif item in self.__dict__:
             return super(DataTable, self).__getattr__(item)
 
     def __setattr__(self, key, value):
-        if '_DataTable__initialized' not in self.__dict__:
-        #if key == '_DataTable__initializing':
+        if "_DataTable__initialized" not in self.__dict__:
+            # if key == '_DataTable__initializing':
             super(DataTable, self).__setattr__(key, value)
         # else:
-            # if self._DataTable__initializing:
-            #     super(DataTable, self).__setattr__(key, value)
-            # else:
+        # if self._DataTable__initializing:
+        #     super(DataTable, self).__setattr__(key, value)
+        # else:
         elif key in self.__dict__:
             super(DataTable, self).__setattr__(key, value)
         else:
             self.__setitem__(key, value)
-
-
 
     def iter_rows(self, include_index=False):
         """
         Returns an iterator for the rows in the DataTable
         """
         return (self.row_to_dict(i, include_index) for i in range(len(self)))
-
 
     def get_column(self, cols):
         """
@@ -278,7 +312,7 @@ class DataTable(object):
 
         colnums = []
         colnames = []
-        #print(cols)
+        # print(cols)
         for col in cols:
             if isinstance(col, str):
                 colnames.append(col)
@@ -288,9 +322,9 @@ class DataTable(object):
                 colnums.append(col)
                 colnames.append(self.columns[col])
             else:
-                raise TypeError('col must be a str or an int - {0}'.format(col))
+                raise TypeError("col must be a str or an int - {0}".format(col))
 
-        #print(colnums)
+        # print(colnums)
         # new_data_set = self.data[:, colnums]
 
         if len(cols) > 1:
@@ -298,15 +332,14 @@ class DataTable(object):
             return DataTable(new_data_set, columns=colnames)
         else:
             new_data_set = self.data[:, colnums[0]]
-            #new_data_set = new_data_set.reshape((len(new_data_set), ))
-            #print(new_data_set.shape)
+            # new_data_set = new_data_set.reshape((len(new_data_set), ))
+            # print(new_data_set.shape)
             return new_data_set
-            #try:
+            # try:
             #    retval = array(list(result.values())[0])
-            #except ValueError:
+            # except ValueError:
             #    retval = list(result.values())[0]
-            #return retval
-
+            # return retval
 
     def set_column(self, column, values=None, fillval=0):
         """
@@ -317,7 +350,7 @@ class DataTable(object):
         """
 
         if values is None:
-            values = array([fillval]*len(self), dtype=object)
+            values = array([fillval] * len(self), dtype=object)
 
         if not isinstance(values, array_type):
             values = array(values)
@@ -327,7 +360,7 @@ class DataTable(object):
 
             self.data[:, cindex] = values  # .reshape(len(values))
 
-            #for i in range(len(self.data)):
+            # for i in range(len(self.data)):
             #    self.data[i][cindex] = values[i]
 
         else:
@@ -344,7 +377,7 @@ class DataTable(object):
             #            self.data[i].append(None)
             else:
                 self.data = values.reshape((len(values), 1))
-                #for i in range(len(values)):
+                # for i in range(len(values)):
                 #    self.data.append([values[i]])
 
     def get_row(self, index):
@@ -431,8 +464,7 @@ class DataTable(object):
         maxg = max(group_values)
         bin_size = (maxg - ming) / nbins
 
-        bins = [(ming + i * bin_size, ming + (i+1) * bin_size)
-                for i in range(nbins)]
+        bins = [(ming + i * bin_size, ming + (i + 1) * bin_size) for i in range(nbins)]
 
         groups = OrderedDict()
         for b in bins:
@@ -471,14 +503,14 @@ class DataTable(object):
 
         colindexes = [self.columns.index(cn) for cn in column_names]
         newdata = delete(self.data, colindexes, 1)
-        #newdata = copy.copy(self.data)
-        #for i in range(len(newdata)):
+        # newdata = copy.copy(self.data)
+        # for i in range(len(newdata)):
         #    newdata[i] = [x for i, x in enumerate(newdata[i]) if i != colindex]
 
         t = DataTable(newdata, columns=cols, name=self.name, index=self.index)
         return t
 
-    def reorder_columns(self, columns, fillval=''):
+    def reorder_columns(self, columns, fillval=""):
         """
         Reorders the columns in the DataTable.  If a specified column does not exist it is filled with *fillval*
         """
@@ -489,7 +521,9 @@ class DataTable(object):
             else:
                 val.append([fillval] * len(self))
 
-        return DataTable(array([list(x) for x in zip(*val)]), columns=columns, index=self.index)
+        return DataTable(
+            array([list(x) for x in zip(*val)]), columns=columns, index=self.index
+        )
 
     def reset_index(self, in_place=False):
         """
@@ -500,14 +534,16 @@ class DataTable(object):
         if in_place:
             self.index = list(range(len(self)))
         else:
-            return DataTable(self.data, columns=self.columns, index=list(range(len(self))))
+            return DataTable(
+                self.data, columns=self.columns, index=list(range(len(self)))
+            )
 
     def __repr__(self):
 
-        if self.name not in ('', None):
+        if self.name not in ("", None):
             retval = "Name: {0}\n".format(self.name)
         else:
-            retval = ''
+            retval = ""
 
         if len(self.metadata) > 0:
             for k in self.metadata:
@@ -524,13 +560,13 @@ class DataTable(object):
 
         lindex = max([len(str(ind)) for ind in self.index])
 
-        retval += ' ' * lindex
+        retval += " " * lindex
         for icol, item in enumerate(columns):
             fmt = "{0:>" + str(colwidth[icol]) + "}"
             retval += fmt.format(item)
-        retval += '\n'
+        retval += "\n"
 
-        #retval += "-" * colwidth * len(self.columns) + '\n'
+        # retval += "-" * colwidth * len(self.columns) + '\n'
         for irow, row in enumerate(self.data):
             fmt = "{0:>" + str(lindex) + "}"
             retval += fmt.format(self.index[irow])
@@ -541,14 +577,14 @@ class DataTable(object):
                     retval += fmt.format(item)
                 else:
                     retval += fmt.format(sigdigits(item, SIG_DIGIT_COUNT))
-            retval += '\n'
+            retval += "\n"
 
         return retval
 
     def __str__(self):
         return self.__repr__()
 
-    def to_csv(self, fileobj, delim='\t', close_file=False):
+    def to_csv(self, fileobj, delim="\t", close_file=False):
         """
         Writes the DataTable to a csv file
         :param fileobj:
@@ -556,21 +592,28 @@ class DataTable(object):
         :return:
         """
         if isinstance(fileobj, str):
-            fileobj = open(fileobj, 'w')
+            fileobj = open(fileobj, "w")
             close_file = True
 
         try:
             if self.name is not None:
-                fileobj.write('__TableName__{0}{1}\n'.format(delim, self.name))
+                fileobj.write("__TableName__{0}{1}\n".format(delim, self.name))
 
             for k in self.metadata:
-                fileobj.write('__metadata__{0}{1}{0}{2}\n'.format(delim, k, self.metadata[k]))
+                fileobj.write(
+                    "__metadata__{0}{1}{0}{2}\n".format(delim, k, self.metadata[k])
+                )
 
             cols = self.columns
-            fileobj.write(delim + delim.join(cols) + '\n')
+            fileobj.write(delim + delim.join(cols) + "\n")
 
             for i, row in enumerate(self.data):
-                fileobj.write(str(self.index[i]) + delim + delim.join([str(x) for x in row]) + '\n')
+                fileobj.write(
+                    str(self.index[i])
+                    + delim
+                    + delim.join([str(x) for x in row])
+                    + "\n"
+                )
         except:
             pass
         finally:
@@ -589,21 +632,21 @@ class DataTable(object):
         if self.name:
             ws = wb.add_sheet(self.name)
         else:
-            ws = wb.add_sheet('data')
+            ws = wb.add_sheet("data")
 
-        #write metadata
+        # write metadata
         irow = 0
         if self.name is not None:
-            ws.write(irow, 0, '__TableName__')
+            ws.write(irow, 0, "__TableName__")
             ws.write(irow, 1, self.name)
 
         for k in self.metadata:
             irow += 1
-            ws.write(irow, 0, '__metadata__')
+            ws.write(irow, 0, "__metadata__")
             ws.write(irow, 1, k)
             ws.write(irow, 2, self.metadata[k])
 
-        #write column names
+        # write column names
         # header_style = xlwt.easyxf("font: bold on; align: wrap on, vert centre, horiz center")
         fnt = xlwt.Font()
         fnt.bold = True
@@ -617,9 +660,9 @@ class DataTable(object):
 
         irow += 1
         for i, col in enumerate(self.columns):
-            ws.write(irow, i+1, col, style=header_style)
+            ws.write(irow, i + 1, col, style=header_style)
 
-        #write the data
+        # write the data
         for i, row in enumerate(self.data):
             irow += 1
             ws.write(irow, 0, self.index[i])
@@ -635,7 +678,7 @@ class DataTable(object):
             return wb
 
     @staticmethod
-    def from_csv(fileobj, delim='\t'):
+    def from_csv(fileobj, delim="\t"):
         """
         Reads a csv file and returns a DataTable
         :param fileobj:
@@ -644,37 +687,37 @@ class DataTable(object):
         """
 
         if isinstance(fileobj, str):
-            fileobj = open(fileobj, 'r')
+            fileobj = open(fileobj, "r")
 
         with fileobj:
 
-            line = fileobj.readline().strip('\n')
+            line = fileobj.readline().strip("\n")
             name = None
-            if line.startswith('__TableName__'):
+            if line.startswith("__TableName__"):
                 name = line.split(delim)[1]
-                line = fileobj.readline().strip('\n')
+                line = fileobj.readline().strip("\n")
 
             metadata = {}
-            while line.startswith('__metadata__'):
+            while line.startswith("__metadata__"):
                 __, key, value = line.split(delim)
                 metadata[key] = value
-                line = fileobj.readline().strip('\n')
+                line = fileobj.readline().strip("\n")
 
             columns = line.split(delim)[1:]
             rows = []
             index = []
-            line = fileobj.readline().strip('\n')
+            line = fileobj.readline().strip("\n")
             while len(line) > 0:
                 row = line.split(delim)
                 row = [parse_primitive(x) for x in row]
                 index.append(row[0])
                 row.pop(0)
                 rows.append(row)
-                line = fileobj.readline().strip('\n')
+                line = fileobj.readline().strip("\n")
 
             fileobj.close()
             return DataTable(rows, columns=columns, name=name)
-        #except:
+        # except:
         #    fileobj.close()
 
     def to_html(self, filename=None):
@@ -692,26 +735,29 @@ class DataTable(object):
         row_tmpl = " " * 4 + "<tr>\n{0}\n    </tr>"
         item_tmpl = " " * 6 + "<td>{0}</td>"
         rows = []
-        row = header_tmpl.format("\n".join([item_tmpl.format(c) for c in [''] + self.columns]))
+        row = header_tmpl.format(
+            "\n".join([item_tmpl.format(c) for c in [""] + self.columns])
+        )
         rows.append(row)
         for i in range(len(self)):
-            items = [item_tmpl.format(self.index[i])] + \
-                    [item_tmpl.format(self[c][i]) for c in self.columns]
+            items = [item_tmpl.format(self.index[i])] + [
+                item_tmpl.format(self[c][i]) for c in self.columns
+            ]
             row = row_tmpl.format("\n".join(items))
             rows.append(row)
         table_text = "\n".join(rows)
 
         # format metadata
-        meta_format = '  <h2> {0}: {1} </h2>'
-        lines = [meta_format.format(k, v) for k,v in self.metadata.items()]
-        md = '\n'.join(lines)
+        meta_format = "  <h2> {0}: {1} </h2>"
+        lines = [meta_format.format(k, v) for k, v in self.metadata.items()]
+        md = "\n".join(lines)
 
         html = html.format(name=self.name, table=table_text, metadata=md)
         # print(html)
         if filename is None:
             return html
         else:
-            with open(filename, 'w') as f:
+            with open(filename, "w") as f:
                 f.write(html)
 
     @property
@@ -719,8 +765,6 @@ class DataTable(object):
         return self.data.shape
 
     # def apply(self, func):
-
-
 
     def apply_func(self, func, axis, name):
         """
@@ -752,14 +796,15 @@ class DataTable(object):
                 res.append([m])
             return DataTable(res, columns=[name], index=self.index)
 
-    if backend == 'numpy':
+    if backend == "numpy":
+
         def min(self, axis=0):
             """
             Finds the minimum value of a column (axis=0) or row (axis=1)
             :param axis:
             :return:
             """
-            return self.apply_func(min, axis, 'min')
+            return self.apply_func(min, axis, "min")
 
         def max(self, axis=0):
             """
@@ -767,7 +812,7 @@ class DataTable(object):
             :param axis:
             :return:
             """
-            return self.apply_func(max, axis, 'max')
+            return self.apply_func(max, axis, "max")
 
         def mean(self, axis=0):
             """
@@ -775,7 +820,7 @@ class DataTable(object):
             :param axis:
             :return:
             """
-            return self.apply_func(mean, axis, 'mean')
+            return self.apply_func(mean, axis, "mean")
 
         def var(self, axis=0, ddof=1):
             """
@@ -786,7 +831,7 @@ class DataTable(object):
             :return:
             """
             func = partial(var, ddof=ddof)
-            return self.apply_func(func, axis, 'var')
+            return self.apply_func(func, axis, "var")
 
         def std(self, axis=0, ddof=1):
             """
@@ -798,7 +843,7 @@ class DataTable(object):
             :return:
             """
             func = partial(std, ddof=ddof)
-            return self.apply_func(std, axis, 'var')
+            return self.apply_func(std, axis, "var")
 
         def sum(self, axis=0):
             """
@@ -806,8 +851,7 @@ class DataTable(object):
             :param axis:
             :return:
             """
-            return self.apply_func(sum, axis, 'sum')
-
+            return self.apply_func(sum, axis, "sum")
 
     elif backend == "pyarray":
 
@@ -884,7 +928,7 @@ class DataTable(object):
         """
         d = OrderedDict(zip(self.columns, self.data[row_index]))
         if include_index:
-            d['_index'] = self.index[row_index]
+            d["_index"] = self.index[row_index]
         return d
 
     def to_list_of_dicts(self, include_index=False):
@@ -912,7 +956,7 @@ class DataTable(object):
         :param **kwargs: fillval - default = None
         """
 
-        fillval = kwargs.get('fillval', None)
+        fillval = kwargs.get("fillval", None)
 
         tables = [t for t in tables if t is not None]
         # all_cols = copy.copy(tables[0].columns)
@@ -933,9 +977,8 @@ class DataTable(object):
 
 
 class RowView:
-
-    def __init__(self, table:DataTable):
-        self.table:DataTable = table
+    def __init__(self, table: DataTable):
+        self.table: DataTable = table
 
     def __getitem__(self, index):
         return self.table.data[index, :]
@@ -946,15 +989,16 @@ class RowView:
             raise IndexError("Speficied index is large than the number of rows.")
 
         if len(val) != len(self.table.data[index]):
-            raise ValueError("Attempting to set row with data that has a mismatch in number of colums.")
+            raise ValueError(
+                "Attempting to set row with data that has a mismatch in number of colums."
+            )
 
         self.table.data._data[index] = val
 
 
 class ColumnView:
-
-    def __init__(self, table:DataTable) -> DataTable | pyndarray:
-        self.table:DataTable = table
+    def __init__(self, table: DataTable) -> DataTable | pyndarray:
+        self.table: DataTable = table
 
     def __getitem__(self, columns):
 
@@ -973,7 +1017,7 @@ class ColumnView:
                 colnums.append(col)
                 colnames.append(self.table.columns[col])
             else:
-                raise TypeError('col must be a str or an int - {0}'.format(col))
+                raise TypeError("col must be a str or an int - {0}".format(col))
 
         if len(columns) > 1:
             new_data_set = self.table.data[:, colnums]
@@ -983,10 +1027,9 @@ class ColumnView:
 
             return new_data_set
 
-
     def __setitem__(self, column, values=None, fillval=0):
 
-    # def set_column(self, column, values=None, fillval=0):
+        # def set_column(self, column, values=None, fillval=0):
         """
         Sets the values for a given column
         :param column:
@@ -995,7 +1038,7 @@ class ColumnView:
         """
 
         if values is None:
-            values = array([fillval]*len(self), dtype=object)
+            values = array([fillval] * len(self), dtype=object)
 
         if not isinstance(values, array_type):
             values = array(values)
@@ -1006,7 +1049,6 @@ class ColumnView:
             self.table.data[:, cindex] = values  # .reshape(len(values))
 
 
-
 def sample_table():
     """
     Generates a simple sample table
@@ -1015,12 +1057,14 @@ def sample_table():
     b = list(range(11, 20))
     c = list(range(21, 30))
     data = [[x, y, z] for x, y, z in zip(a, b, c)]
-    cols = ['a', 'b', 'c']
+    cols = ["a", "b", "c"]
     return DataTable(data, columns=cols)
+
 
 def sample_table2(ncol, nrow):
     import string
     from koala import pyarray
+
     keys = string.ascii_lowercase[:ncol]
     data = pyarray.pyndarray(shape=(nrow, ncol)).random_fill()
     # data = [[random.normalvariate(0.0, 1.0) for i in range(ncol)] for j in range(nrow)]

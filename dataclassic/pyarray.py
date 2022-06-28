@@ -3,6 +3,7 @@ import copy
 from itertools import chain, product
 from functools import partial
 import itertools
+
 # def multirange_next(value_counts, counters):
 
 #     if not value_counts:
@@ -19,7 +20,7 @@ import itertools
 #             counters[i] = 0
 #             i -= 1
 
-    # raise StopIteration
+# raise StopIteration
 
 
 def multirange(*value_counts):
@@ -42,10 +43,12 @@ def multirange(*value_counts):
     # if len(value_counts) == 0:
     #     raise StopIteration
 
-    # counters = [0] * len(value_counts)
-    # while counters:
-    #     yield counters
-    #     counters = multirange_next(value_counts, counters)
+
+0
+# counters = [0] * len(value_counts)
+# while counters:
+#     yield counters
+#     counters = multirange_next(value_counts, counters)
 
 
 def slice_to_range(myslice, myobj, idim=0):
@@ -75,6 +78,7 @@ class NANType:
     """
     A not a number type.  This should not be used directly.  The module instance NAN should be used.
     """
+
     instance = None
 
     def __init__(self):
@@ -82,13 +86,13 @@ class NANType:
         if NANType.instance is None:
             NANType.instance = self
         else:
-            raise TypeError('You cannot create a NANType instance.\nUse the NAN object')
+            raise TypeError("You cannot create a NANType instance.\nUse the NAN object")
 
     def __str__(self):
-        return 'NaN'
+        return "NaN"
 
     def __repr__(self):
-        return 'NAN'
+        return "NAN"
 
     def __eq__(self, other):
         return False
@@ -111,6 +115,7 @@ class NANType:
     def __len__(self):
         return 0
 
+
 if NANType.instance is None:
     NANType()
 
@@ -128,7 +133,7 @@ def eq(x, y):
 
 
 def ne(x, y):
-    return x !=y
+    return x != y
 
 
 def gt(x, y):
@@ -155,7 +160,6 @@ def array(x, *args, **kwargs):
 
 
 class pyndarray:
-
     def __init__(self, data=None, shape=None, fill=0.0, allow_nan=True):
         """
 
@@ -175,10 +179,12 @@ class pyndarray:
             self.ndim = len(self.shape)
             self._data = []
 
-            self._data = [fill]*self.shape[-1]
+            self._data = [fill] * self.shape[-1]
             if self.ndim > 1:
-                for idim in range(self.ndim-2, -1, -1):
-                    self._data = [copy.deepcopy(self._data) for ix in range(self.shape[idim])]
+                for idim in range(self.ndim - 2, -1, -1):
+                    self._data = [
+                        copy.deepcopy(self._data) for ix in range(self.shape[idim])
+                    ]
 
         elif isinstance(data, pyndarray):
             self._data = copy.deepcopy(data)
@@ -191,7 +197,7 @@ class pyndarray:
             self.ndim = 1
 
         elif data is not None:
-            if hasattr(data, 'tolist'):
+            if hasattr(data, "tolist"):
                 self._data = data.tolist()
             else:
                 self._data = copy.deepcopy(data)
@@ -203,7 +209,11 @@ class pyndarray:
             self.shape = tuple(self.shape)
             self.ndim = len(self.shape)
         else:
-            raise ValueError('You must specify either data for shape for creating a {0}'.format(type(self)))
+            raise ValueError(
+                "You must specify either data for shape for creating a {0}".format(
+                    type(self)
+                )
+            )
 
     def mapfill(self, mapfunc):
         """
@@ -228,6 +238,7 @@ class pyndarray:
         If ndim == 3 then the number is i*100 + j*10 + k
         :return:
         """
+
         def genindexnum(v, *args):
             return sum([10**i * a for i, a in enumerate(reversed(args))])
 
@@ -244,12 +255,13 @@ class pyndarray:
             return random.random()
 
         return self.mapfill(fillfunc)
-    #@property
-    #def ndim(self):
+
+    # @property
+    # def ndim(self):
     #    return 2
 
-    #@property
-    #def shape(self):
+    # @property
+    # def shape(self):
     #    return (self.m, self.n)
 
     def reshape(self, new_shape, fill=0):
@@ -278,17 +290,29 @@ class pyndarray:
         if self.ndim == 1:
             data = [self[i] for i in range(self.shape[0]) if mask[i]]
         elif self.ndim == 2:
-            data = [[self[i, j] for j in range(self.shape[-1]) if mask[i, j]]
-                    for i in range(self.shape[-2])]
+            data = [
+                [self[i, j] for j in range(self.shape[-1]) if mask[i, j]]
+                for i in range(self.shape[-2])
+            ]
         elif self.ndim == 3:
-            data = [[[self[i, j, k] for k in range(self.shape[-1]) if mask[i, j]]
-                     for j in range(self.shape[-2])]
-                    for i in range(self.shape[-3])]
+            data = [
+                [
+                    [self[i, j, k] for k in range(self.shape[-1]) if mask[i, j]]
+                    for j in range(self.shape[-2])
+                ]
+                for i in range(self.shape[-3])
+            ]
         elif self.ndim == 4:
-            data = [[[[self[h, i, j, k] for k in range(self.shape[-1]) if mask[i, j]]
-                      for j in range(self.shape[-2])]
-                     for i in range(self.shape[-3])]
-                    for h in range(self.shape[-4])]
+            data = [
+                [
+                    [
+                        [self[h, i, j, k] for k in range(self.shape[-1]) if mask[i, j]]
+                        for j in range(self.shape[-2])
+                    ]
+                    for i in range(self.shape[-3])
+                ]
+                for h in range(self.shape[-4])
+            ]
         a = pyndarray(data=data, allow_nan=self.allow_nan)
 
         return a
@@ -315,7 +339,7 @@ class pyndarray:
 
     def __getitem__(self, args):
 
-        if not hasattr(args, '__getitem__'):
+        if not hasattr(args, "__getitem__"):
             args = [args]
 
         if any(isinstance(arg, slice) for arg in args[:-1]):
@@ -329,7 +353,9 @@ class pyndarray:
                 else:
                     return [get_data_range(data[i], myranges[1:]) for i in myranges[0]]
 
-            ranges = [slice_to_range(arg, self._data, idim) for idim, arg in enumerate(args)]
+            ranges = [
+                slice_to_range(arg, self._data, idim) for idim, arg in enumerate(args)
+            ]
             # print('----')
             # print(self._data, ranges)
             newobj = get_data_range(self._data, ranges)
@@ -358,7 +384,7 @@ class pyndarray:
         try:
             part1 = all(len(row) == 1 for row in iter(self))
             if part1:
-                part2 = all(not(isinstance(row[0], list)) for row in iter(self))
+                part2 = all(not (isinstance(row[0], list)) for row in iter(self))
                 return part2
             else:
                 return False
@@ -372,7 +398,7 @@ class pyndarray:
 
     def __setitem__(self, args, value):
 
-        if not hasattr(args, '__getitem__'):
+        if not hasattr(args, "__getitem__"):
             args = [args]
 
         if any(isinstance(arg, slice) for arg in args):
@@ -410,7 +436,7 @@ class pyndarray:
 
         else:
             d = self._data
-            for iarg in range(len(args)-1):
+            for iarg in range(len(args) - 1):
                 d = d[args[iarg]]
             d[args[-1]] = value
 
@@ -424,19 +450,30 @@ class pyndarray:
         try:
             lines = []
             if self.ndim == 1:
-                return 'array(['+' '.join('{0:>10}'.format(self[j]) for j in range(self.shape[0]))+'])'
+                return (
+                    "array(["
+                    + " ".join("{0:>10}".format(self[j]) for j in range(self.shape[0]))
+                    + "])"
+                )
             else:
                 gprev = None
                 for indexes in multirange(*self.shape[:-1]):
                     lind = list(indexes)
                     if len(lind) > 1:
                         if lind[:-1] != gprev:
-                            lines.append('Indexes={0}'.format(lind[:-1]))
+                            lines.append("Indexes={0}".format(lind[:-1]))
                             gprev = lind[:-1]
 
-                    lines.append('['+' '.join('{0:>10}'.format(self[lind+ [j]]) for j in range(self.shape[-1]))+']')
-                #lines.append(' '.join(str(self._data[i][j]) for j in range(self.shape[-1])))
-            return '\n'.join(lines)
+                    lines.append(
+                        "["
+                        + " ".join(
+                            "{0:>10}".format(self[lind + [j]])
+                            for j in range(self.shape[-1])
+                        )
+                        + "]"
+                    )
+                # lines.append(' '.join(str(self._data[i][j]) for j in range(self.shape[-1])))
+            return "\n".join(lines)
         except:
             return str(self._data)
 
@@ -453,7 +490,7 @@ class pyndarray:
 
     def __add__(self, other):
 
-        #newobj = pyndarray(shape=self.shape)
+        # newobj = pyndarray(shape=self.shape)
         newobj = copy.deepcopy(self)
 
         if isinstance(other, (float, int, type(self[0, 0]))):
@@ -470,10 +507,10 @@ class pyndarray:
 
     def __sub__(self, other):
 
-        #newobj = pyndarray(shape=self.shape)
+        # newobj = pyndarray(shape=self.shape)
         newobj = copy.deepcopy(self)
 
-        if not hasattr(other, '__getitem__'):
+        if not hasattr(other, "__getitem__"):
             for indexes in multirange(*self.shape):
                 newobj[indexes] -= other
         else:
@@ -487,10 +524,10 @@ class pyndarray:
 
     def __mul__(self, other):
 
-        #newobj = pyndarray(shape=self.shape)
+        # newobj = pyndarray(shape=self.shape)
         newobj = copy.deepcopy(self)
 
-        if not hasattr(other, '__getitem__'):
+        if not hasattr(other, "__getitem__"):
             for indexes in multirange(*self.shape):
                 newobj[indexes] *= other
         else:
@@ -504,10 +541,10 @@ class pyndarray:
 
     def __truediv__(self, other):
 
-        #newobj = pyndarray(shape=self.shape)
+        # newobj = pyndarray(shape=self.shape)
         newobj = copy.deepcopy(self)
 
-        if not hasattr(other, '__getitem__'):
+        if not hasattr(other, "__getitem__"):
             for indexes in multirange(*self.shape):
                 try:
                     newobj[indexes] /= other
@@ -573,7 +610,6 @@ class pyndarray:
 
         return self.__compare_elements(other, gte)
 
-
     def __compare_elements(self, other, op):
 
         newobj = pyndarray(shape=self.shape, fill=False)
@@ -592,7 +628,7 @@ class pyndarray:
         newobj = copy.deepcopy(self)
 
         for indexes in multirange(*self.shape):
-                newobj[indexes] *= -1
+            newobj[indexes] *= -1
 
         return newobj
 
@@ -600,7 +636,7 @@ class pyndarray:
 
         newobj = copy.deepcopy(self)
 
-        if not hasattr(other, '__getitem__'):
+        if not hasattr(other, "__getitem__"):
             for indexes in multirange(*self.shape):
                 newobj[indexes] %= other
         else:
@@ -613,7 +649,7 @@ class pyndarray:
 
         newobj = copy.deepcopy(self)
 
-        if not hasattr(exponent, '__getitem__'):
+        if not hasattr(exponent, "__getitem__"):
             for indexes in multirange(*self.shape):
                 newobj[indexes] = newobj[indexes] ** exponent
         else:
@@ -649,18 +685,39 @@ class pyndarray:
                 return func([self[indexes] for indexes in multirange(*self.shape)])
         if self.ndim == 3:
             if axis == 0:
-                return [func([self[(i_outer, i_inner[1], i_inner[2])] for i_inner in multirange(*self.shape[1:3])])
-                        for i_outer in range(self.shape[0])]
+                return [
+                    func(
+                        [
+                            self[(i_outer, i_inner[1], i_inner[2])]
+                            for i_inner in multirange(*self.shape[1:3])
+                        ]
+                    )
+                    for i_outer in range(self.shape[0])
+                ]
             if axis == 1:
-                return [func([self[(i_inner[0], i_outer, i_inner[2])] for i_inner in multirange(*self.shape[0::2])])
-                        for i_outer in range(self.shape[1])]
+                return [
+                    func(
+                        [
+                            self[(i_inner[0], i_outer, i_inner[2])]
+                            for i_inner in multirange(*self.shape[0::2])
+                        ]
+                    )
+                    for i_outer in range(self.shape[1])
+                ]
             if axis == 2:
-                return [func([self[(i_inner[0], i_inner[1], i_outer)] for i_inner in multirange(*self.shape[0:2])])
-                        for i_outer in range(self.shape[2])]
+                return [
+                    func(
+                        [
+                            self[(i_inner[0], i_inner[1], i_outer)]
+                            for i_inner in multirange(*self.shape[0:2])
+                        ]
+                    )
+                    for i_outer in range(self.shape[2])
+                ]
             elif axis is None:
                 return func([self[indexes] for indexes in multirange(*self.shape)])
         elif axis is None:
-                return func([self[indexes] for indexes in multirange(*self.shape)])
+            return func([self[indexes] for indexes in multirange(*self.shape)])
 
     def mean(self, axis=None):
         """
@@ -693,12 +750,18 @@ class pyndarray:
     def argsort(self, axis=0, i=0):
 
         if self.ndim == 1:
-            return list(zip(*list(sorted(enumerate(self._data), key=lambda x: x[1]))))[0]
+            return list(zip(*list(sorted(enumerate(self._data), key=lambda x: x[1]))))[
+                0
+            ]
         elif self.ndim == 2:
             if axis == 0:
-                return list(zip(*list(sorted(enumerate(self._data[:, i]), key=lambda x: x[1]))))[0]
+                return list(
+                    zip(*list(sorted(enumerate(self._data[:, i]), key=lambda x: x[1])))
+                )[0]
             elif axis == 1:
-                list(zip(*list(sorted(enumerate(self._data[i, :]), key=lambda x: x[1]))))[0]
+                list(
+                    zip(*list(sorted(enumerate(self._data[i, :]), key=lambda x: x[1])))
+                )[0]
 
     def sum(self, axis=0):
         return self.apply_func(sum, axis)
@@ -717,7 +780,7 @@ class pyndarray:
         result = pyndarray(shape=self.shape)
 
         for indexes in multirange(*self.shape):
-            result[indexes] = (self[indexes] or other[indexes])
+            result[indexes] = self[indexes] or other[indexes]
 
         return result
 
@@ -737,7 +800,6 @@ class pyndarray:
 
 
 class ArrayView(pyndarray):
-
     def __init__(self, x, myslice):
         self._referenced_array = x
         self._referenced_slice = myslice
@@ -751,7 +813,6 @@ class ArrayView(pyndarray):
         self._referenced_array[self._referenced_slice] = value
 
 
-
 ######################################
 # primitive functions
 ######################################
@@ -763,7 +824,7 @@ def mean(x):
 def var(x, ddof=1, mn=None):
     if mn is None:
         mn = mean(x)
-    return sum([(xi-mn)**2 for xi in x]) / (len(x)-ddof)
+    return sum([(xi - mn) ** 2 for xi in x]) / (len(x) - ddof)
 
 
 def std(x, ddof=1, mn=None):
@@ -789,6 +850,7 @@ sum = sum
 # array functions
 #########################################
 
+
 def transpose(x):
     """
     Transposes a pyndarray
@@ -797,6 +859,7 @@ def transpose(x):
     :return: the transposed pyndarray
     """
     return x.transpose()
+
 
 def append(x, y, axis=0):
     """
@@ -833,15 +896,20 @@ def delete(x, indexes, axis=None):
     :return:
     """
     x = array(x)
-    if not hasattr(indexes, '__iter__'):
-        indexes = (indexes, )
+    if not hasattr(indexes, "__iter__"):
+        indexes = (indexes,)
     if axis is None:
-        return array([xi for i, xi in enumerate(multirange(*x.shape)) if i not in indexes])
+        return array(
+            [xi for i, xi in enumerate(multirange(*x.shape)) if i not in indexes]
+        )
     else:
+
         def inner_delete(y, del_ind, inner_axis, actual_axis):
             if inner_axis != actual_axis:
                 aa = actual_axis + 1
-                return [inner_delete(y[i], del_ind, inner_axis, aa) for i in range(len(y))]
+                return [
+                    inner_delete(y[i], del_ind, inner_axis, aa) for i in range(len(y))
+                ]
             else:
                 return [yi for i, yi in enumerate(y) if i not in del_ind]
 
@@ -862,7 +930,8 @@ def eye(m):
 
     return ident
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
 
     x = pyndarray(shape=(3, 6))
     y = pyndarray(shape=(10, 5)).random_fill()
@@ -872,44 +941,44 @@ if __name__ == '__main__':
     y = round(y, 4)
     print(y)
 
-    print('mapfill')
+    print("mapfill")
     z = y.index_fill()
     print(z)
 
-    print('Single item access')
+    print("Single item access")
     print(y[1, 2])
 
-    print('Row slicing')
+    print("Row slicing")
     print(str(y[1:5, 1]))
 
-    print('Column Slicing')
+    print("Column Slicing")
     print(y[1, 1:5])
 
-    print('Slicing in both directions')
+    print("Slicing in both directions")
     print(y[1:5, 1:5])
     print()
-    print(y+y)
-    print('add')
-    print(y+10)
-    print('radd')
-    print(10+y)
-    print('mul')
-    print(y*10)
-    print('div')
-    print(y/100000)
+    print(y + y)
+    print("add")
+    print(y + 10)
+    print("radd")
+    print(10 + y)
+    print("mul")
+    print(y * 10)
+    print("div")
+    print(y / 100000)
     print()
-    print(y/y)
-    print('abs')
+    print(y / y)
+    print("abs")
     print(abs(y))
-    print('round')
+    print("round")
     print(round(y, 2))
-    print('equality')
-    print(y==y)
-    print(z==y)
-    print('pow')
+    print("equality")
+    print(y == y)
+    print(z == y)
+    print("pow")
     print(z**2)
-    print('division by 0')
-    print(z/z)
+    print("division by 0")
+    print(z / z)
 
-    print('Transpose')
+    print("Transpose")
     print(y[:, 0] == y.transpose()[0, :])

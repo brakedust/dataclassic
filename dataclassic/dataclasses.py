@@ -47,7 +47,6 @@ Additional information on each field is stored in the metadata entry of the fiel
 """
 
 import copy
-import sys
 import typing
 from dataclasses import MISSING, dataclass as dataclass_
 from dataclasses import field as field_
@@ -55,8 +54,6 @@ from dataclasses import fields, is_dataclass, Field
 from datetime import date, datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from textwrap import dedent
-from typing import Dict, List, Union
 from uuid import UUID
 
 from functools import wraps
@@ -69,7 +66,7 @@ __all__ = [
     "asdict",
     "Unset",
     "MISSING",
-    "dataclass"
+    "dataclass",
 ]
 
 
@@ -130,8 +127,9 @@ def field(
     )
 
 
-class KoalaValidationError(Exception):
+class DataClassicValidationError(Exception):
     pass
+
 
 def is_generic_container(cls):
 
@@ -140,7 +138,6 @@ def is_generic_container(cls):
 
     if isinstance(cls, typing._GenericAlias):
         return True
-
 
 
 def post_init_coersion(cls):
@@ -160,7 +157,7 @@ def post_init_coersion(cls):
             if "validator" in f.metadata and f.metadata["validator"]:
                 # if a validator function is defined, then run it
                 if not f.metadata["validator"](self):
-                    raise KoalaValidationError(
+                    raise DataClassicValidationError(
                         f"Validation for {cls.__name__}.{f.name} failed."
                     )
 
@@ -202,9 +199,9 @@ def post_init_coersion(cls):
                         except Exception as ex:
                             raise Exception(
                                 f"Error parsing item in field [{f.name}] - {ex.args[0]}\n" +
-                                f"All items must be of type [{subtype.__name__}] - items are {ex.__traceback__.tb_frame.f_locals['current_value']}"
+                                f"All items must be of type [{subtype.__name__}] - items are " +
+                                f"{ex.__traceback__.tb_frame.f_locals['current_value']}"
                             )
-
 
                 elif f.type.__origin__ is dict:
 
@@ -239,6 +236,7 @@ def post_init_coersion(cls):
     # cls = dataclass(cls)
 
     return cls
+
 
 @wraps(dataclass_)
 def dataclass(cls, **kwargs):
@@ -339,5 +337,3 @@ JSON_SCHEMA_TYPES = {
 }
 
 JSON_SCHEMA_FORMATS = {UUID: "UUID", datetime: "date-time"}
-
-

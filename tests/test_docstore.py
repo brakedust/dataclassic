@@ -1,24 +1,20 @@
 from dataclasses import is_dataclass
 import unittest
-from koala.doc_store import DocumentStore, Database
+from dataclassic.doc_store import DocumentStore, Database
 from unittest import TestCase
 
-from koala_tests._test_setup import Shape, triangle, rectangle, pentagon, hexagon
+from tests._test_setup import Shape, triangle, rectangle, pentagon, hexagon
 
 
 class TestPostInit(TestCase):
-
-
     def setUp(self):
         db = Database("sqlite:///:memory:")
         shapes = DocumentStore("shapes", db, False, dtype=Shape)
         chairs = DocumentStore("chairs", db, False)
         return db, shapes, chairs
 
-
     def tearDown(self) -> None:
         pass
-
 
     def test_shapes(self):
 
@@ -46,4 +42,3 @@ class TestPostInit(TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

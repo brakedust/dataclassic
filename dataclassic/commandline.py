@@ -30,7 +30,7 @@ Example:
 import sys
 from functools import partial
 from dataclasses import Field
-from koala.dataclasses import fields, MISSING, JSON_SCHEMA_TYPES, dataclass, post_init_coersion, field as field_
+from dataclassic.dataclasses import fields, MISSING, JSON_SCHEMA_TYPES, dataclass, post_init_coersion, field as field_
 
 
 class ParseError(Exception):
