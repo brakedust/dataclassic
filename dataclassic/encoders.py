@@ -1,9 +1,11 @@
 import zlib
 
-try:
-    import ujson as json
-except ImportError:
-    import json
+import json
+
+# try:
+#     import ujson as json
+# except ImportError:
+#     import json
 
 
 class JsonEncoder(object):
@@ -29,7 +31,6 @@ class JsonEncoder(object):
         Decodes a json string into a dict/list object
         :param val: the value to decode
         """
-        #return json.loads(val)
 
         return self._decoder.decode(val)
 
@@ -46,11 +47,11 @@ class ZlibEncoder(object):
         self.base_encoder = base_encoder()
 
     def encode(self, val):
-        enc_val = self.base_encoder.encode(val).encode('utf-8')
+        enc_val = self.base_encoder.encode(val).encode("utf-8")
         return zlib.compress(enc_val)
 
     def decode(self, val):
 
         val = zlib.decompress(val)
-        val = val.decode('utf-8')
+        val = val.decode("utf-8")
         return self.base_encoder.decode(val)

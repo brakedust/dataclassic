@@ -3,7 +3,7 @@ from tests._test_tools import Raises
 
 # from dataclasses import dataclass
 from dataclassic.doc_store import DocumentStore, Database
-from dataclassic import dataclass, field, KoalaValidationError
+from dataclassic import dataclass, field, DataClassicValidationError
 
 from tests._test_setup import Shape, db, hexagon, triangle
 
@@ -18,7 +18,7 @@ class WeirdChair:
 class WeirdChairTest(unittest.TestCase):
     def test_bad_chair(self):
 
-        with Raises(KoalaValidationError):
+        with Raises(DataClassicValidationError):
             bogus_shape = Shape(ID="madeUpAgon", sides=-2, color="yellow")
 
     def test_good_chair(self):

@@ -1,9 +1,9 @@
 """
 =================
-koala.dataclasses
+dataclassic.dataclasses
 =================
 
-The koala.dataclasses module provides a set of dataclass extensions via decorators.
+The dataclassic.dataclasses module provides a set of dataclass extensions via decorators.
 These extenstions cover things like
     * Data validation and coercion
     * Doc strings for dataclass fields
@@ -17,17 +17,20 @@ Additional information on each field is stored in the metadata entry of the fiel
 
 
 
-    from koala.dataclasses import dataclass, post_init_coersion, field, KoalaValidationError
+    from dataclassic.dataclasses import dataclass, field, DataClassicValidationError
 
 
     def RealShapeValidator(shape):
         return shape.sides > 2
 
     @dataclass
-    @post_init_coersion
     class Shape:
         ID: str = field(converter=str)
-        sides: int = field(converter=int, validator=RealShapeValidator)
+        sides: int = field(
+            converter=int,
+            validator=RealShapeValidator,
+            doc="Number of sides in the shape"
+        )
         color: str = field(converter=str)
 
 
@@ -133,7 +136,7 @@ class DataClassicValidationError(Exception):
 
 def is_generic_container(cls):
 
-    if hasattr(cls, '__origin__'):
+    if hasattr(cls, "__origin__"):
         return True
 
     if isinstance(cls, typing._GenericAlias):
@@ -198,9 +201,9 @@ def post_init_coersion(cls):
                             )
                         except Exception as ex:
                             raise Exception(
-                                f"Error parsing item in field [{f.name}] - {ex.args[0]}\n" +
-                                f"All items must be of type [{subtype.__name__}] - items are " +
-                                f"{ex.__traceback__.tb_frame.f_locals['current_value']}"
+                                f"Error parsing item in field [{f.name}] - {ex.args[0]}\n"
+                                + f"All items must be of type [{subtype.__name__}] - items are "
+                                + f"{ex.__traceback__.tb_frame.f_locals['current_value']}"
                             )
 
                 elif f.type.__origin__ is dict:

@@ -11,9 +11,12 @@ turn a dataclass into CLI that parses the command line.  Mix this with the
 
 Example:
 
+    from dataclassic.commandline import Program, command, field
+
+    prog = Program()
+
     @command
     @dataclass
-    @post_init_coersion
     class greet:
 
         name: str = field(doc="Name of the hero", nargs=2)
@@ -22,7 +25,9 @@ Example:
 
         def execute(self):
 
-            val = f"Hello.  {self.name[0]} {self.name[1]}'s favorite numbers are {', '.join(str(x) for x in self.numbers)} and they speak {self.language}."
+            val = (
+                f"Hello.  {self.name[0]} {self.name[1]}'s favorite numbers are" +
+                f" {', '.join(str(x) for x in self.numbers)} and they speak {self.language}."
             print(val)
 
 
@@ -30,7 +35,13 @@ Example:
 import sys
 from functools import partial
 from dataclasses import Field
-from dataclassic.dataclasses import fields, MISSING, JSON_SCHEMA_TYPES, dataclass, post_init_coersion, field as field_
+from dataclassic.dataclasses import (
+    fields,
+    MISSING,
+    JSON_SCHEMA_TYPES,
+    dataclass,
+    field as field_,
+)
 
 
 class ParseError(Exception):
@@ -43,16 +54,15 @@ def field(*, is_flag=False, **kwargs) -> Field:
     if "metadata" not in kwargs:
         kwargs["metadata"] = {}
 
-    kwargs["metadata"]['is_flag'] = is_flag
+    kwargs["metadata"]["is_flag"] = is_flag
 
-    if is_flag and ('default' not in kwargs):
-        kwargs['default'] = False
+    if is_flag and ("default" not in kwargs):
+        kwargs["default"] = False
 
     return field_(**kwargs)
 
 
 class Program:
-
     def __init__(self, name=""):
 
         self.name = name
@@ -63,7 +73,7 @@ class Program:
 
         self.settings = None
 
-    def command(self, cls: type=None, *, name=None):
+    def command(self, cls: type = None, *, name=None):
         """This is a decorator"""
         return command(cls, name=name, program=self)
         # self.commands[cls.name] = cls
@@ -92,27 +102,22 @@ class Program:
         for iarg, arg in enumerate(args):
 
             if arg in self.commands.keys():
-                exec_stack.append(
-                    [iarg, arg, self.commands[arg]]
-                )
-
+                exec_stack.append([iarg, arg, self.commands[arg]])
 
         for i, cmd_info in enumerate(exec_stack):
 
             start_arg = cmd_info[0]
-            end_arg = -1 if (i == len(exec_stack)-1) else exec_stack[i+1][0]
+            end_arg = -1 if (i == len(exec_stack) - 1) else exec_stack[i + 1][0]
             if end_arg >= 0:
-                cmd_info[2] = cmd_info[2].parse_args(args[start_arg+1:end_arg])
+                cmd_info[2] = cmd_info[2].parse_args(args[start_arg + 1 : end_arg])
             else:
-                cmd_info[2] = cmd_info[2].parse_args(args[start_arg+1:])
+                cmd_info[2] = cmd_info[2].parse_args(args[start_arg + 1 :])
 
         return exec_stack
-
 
     def print_parsed_command_line(self, exec_stack):
         for i, cmd_info in enumerate(exec_stack):
             print(f"{i:00d}: {cmd_info[2]}")
-
 
     def execute(self, exec_stack):
 
@@ -135,17 +140,17 @@ def make_alias(f: Field, opt: dict[str, Field]):
     and see if it has been taken yet.  If not, add an entry into the
     options dictionary
     """
-    alias = f.metadata.get('alias', None)
+    alias = f.metadata.get("alias", None)
     if alias:
         opt[alias] = f
     else:
-        maybe_alias = '-' + f.metadata["shell_name"].strip('-')[0]
-        if not maybe_alias in opt:
+        maybe_alias = "-" + f.metadata["shell_name"].strip("-")[0]
+        if maybe_alias not in opt:
             opt[maybe_alias] = f
-            f.metadata['alias'] = maybe_alias
+            f.metadata["alias"] = maybe_alias
 
 
-def command(cls: type=None, *, name=None, program=None):
+def command(cls: type = None, *, name=None, program=None):
     """
     Decorator to make a dataclass parse command line arguments
 
@@ -185,14 +190,13 @@ def command(cls: type=None, *, name=None, program=None):
             cls._options[f.metadata["shell_name"]] = f
             make_alias(f, cls._options)
 
-        elif (f.default != MISSING):
-            f.metadata["shell_name"] =  f"--{f.name}"
+        elif f.default != MISSING:
+            f.metadata["shell_name"] = f"--{f.name}"
             cls._options[f.metadata["shell_name"]] = f
             make_alias(f, cls._options)
         else:
             f.metadata["shell_name"] = f.name
             cls._arguments.append(f)
-
 
     @classmethod
     def parse_args(cls, inargs=None):
@@ -225,30 +229,35 @@ def command(cls: type=None, *, name=None, program=None):
                     val = [inargs.pop(iarg) for i in range(nargs)]
                     kwargs[cls._options[shell_name].name] = val
 
-        #----------------------
+        # ----------------------
         # look for unknown options
         found_unknown_arg = False
         errs = []
         for arg in inargs:
             if isinstance(arg, str) and arg.startswith("-"):
                 found_unknown_arg = True
-                errs.append(f"Unknown argument [{arg}] found in command [{cls.__name__}]")
+                errs.append(
+                    f"Unknown argument [{arg}] found in command [{cls.__name__}]"
+                )
 
         if found_unknown_arg:
             raise ParseError("\n".join(errs))
 
-        #----------------------
+        # ----------------------
         # Handle positional arguments
         args = []
         for f in cls._arguments:
             nargs = f.metadata.get("nargs", 1)
-            if nargs in ('*',):
+            if nargs in ("*",):
                 args.append(list(inargs))
                 inargs = []
-            if nargs in ('+',):
+            if nargs in ("+",):
                 if len(inargs) == 0:
-                    # sys.stderr.writelines([f"No arguments specified for argument [{f.name}] in command [{cls.__name__}] which requires at least one"])
-                    raise ParseError(f"No arguments specified for argument [{f.name}] in command [{cls.__name__}] which requires at least one")
+
+                    raise ParseError(
+                        f"No arguments specified for argument [{f.name}] in "
+                        + f"command [{cls.__name__}] which requires at least one"
+                    )
                 args.append(list(inargs))
                 inargs = []
             elif nargs == 1:
@@ -264,7 +273,6 @@ def command(cls: type=None, *, name=None, program=None):
             print(ex.args[0])
             raise ParseError(ex)
 
-
         return self
 
     @classmethod
@@ -273,20 +281,28 @@ def command(cls: type=None, *, name=None, program=None):
         text.append(f"{cls.name}")
         text.append("\nPositional Arguments\n--------------------")
         for f in cls._arguments:
-            text.append(f"{f.name} \n    type = {JSON_SCHEMA_TYPES[f.type]}\n    count = {f.metadata.get('nargs',1)}")
+            text.append(
+                f"{f.name} \n    type = {JSON_SCHEMA_TYPES[f.type]}\n"
+                + f"    count = {f.metadata.get('nargs',1)}"
+            )
 
         text.append("\nOptions\n--------------------")
         for f in set(cls._options.values()):
             shell_name = f.metadata["shell_name"]
-            alias = f.metadata.get('alias', None)
+            alias = f.metadata.get("alias", None)
             if alias:
                 name = f"{shell_name}/{alias}"
             else:
                 name = shell_name
             if f.metadata.get("is_flag", False):
-                text.append(f"{name} \n    type = boolean flag\n    default = {f.default}")
+                text.append(
+                    f"{name} \n    type = boolean flag\n    default = {f.default}"
+                )
             else:
-                text.append(f"{name} \n    type = {JSON_SCHEMA_TYPES[f.type]}\n    count = {f.metadata.get('nargs', 1)}\n    default = {f.default}")
+                text.append(
+                    f"{name} \n    type = {JSON_SCHEMA_TYPES[f.type]}\n"
+                    + f"    count = {f.metadata.get('nargs', 1)}\n    default = {f.default}"
+                )
 
         return "\n".join(text)
 

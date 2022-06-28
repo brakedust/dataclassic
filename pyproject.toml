@@ -4,6 +4,9 @@ version = "0.1.0"
 description = "Making dataclasses even more awesome"
 authors = ["Brad Campbell <brakedust7@proton.mail>"]
 
+[tool.poetry.urls]
+"Source Code" = "https://github.com/brakedust/dataclassic"
+
 [tool.poetry.dependencies]
 python = "^3.10"
 

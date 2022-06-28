@@ -474,7 +474,7 @@ class pyndarray:
                     )
                 # lines.append(' '.join(str(self._data[i][j]) for j in range(self.shape[-1])))
             return "\n".join(lines)
-        except:
+        except:  # nopep8
             return str(self._data)
 
     def iterrows(self):

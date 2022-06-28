@@ -155,7 +155,7 @@ class DataTable(object):
 
         if self.index is None:
             index_col = "_index"
-            if not index_col in self.columns:
+            if index_col not in self.columns:
                 index_col = "index"
             if index_col in self.columns:
                 self.index = self.get_column(index_col)
@@ -165,33 +165,6 @@ class DataTable(object):
                 self.columns.remove(index_col)
             else:
                 self.index = list(range(self.data.shape[0]))
-        # self.__initializing = False
-
-        # def set_attribute(self, key, value):
-        #    #if key in self.__dict__:
-        #    #    object.__setattr__(key, value)
-        #    #else:
-        #    self.__setitem__(key, value)
-        #
-        # self.__setattr__ = set_attribute
-
-    # @property
-    # def columns(self):
-    #    """
-    #    Returns the column names of the DataTable
-    #    :return:
-    #    """
-    #    return self._columns
-    #
-    # @TypedSetter((list, set, tuple), allow_none=False)
-    # @columns.setter
-    # def columns(self, value):
-    #    """
-    #    Sets the column names of the DataTable
-    #    :param value:
-    #    :return:
-    #    """
-    #    self._columns = value
 
     @staticmethod
     def from_column_dict(
@@ -438,10 +411,11 @@ class DataTable(object):
 
     def groupby(self, column_name, lazy_eval=False):
         """
-        Groups the DataTable into a set of dicts based on common values for the **column_name** column
+        Groups the DataTable into a set of dicts based on common values for
+        the **column_name** column
         :param column_name:
-        :param bool lazy_eval: If true, then each item in the returned dict is a function that gets it's group,
-                                otherwise each item in the return dict is a DataTable
+        :param bool lazy_eval: If true, then each item in the returned dict is a
+            function that gets it's group, otherwise each item in the return dict is a DataTable
         :return:
         """
         group_names = set(self[column_name])
@@ -466,7 +440,7 @@ class DataTable(object):
 
         bins = [(ming + i * bin_size, ming + (i + 1) * bin_size) for i in range(nbins)]
 
-        groups = OrderedDict()
+        groups = {}
         for b in bins:
             mask = (self[column_name] >= b[0]) & (self[column_name] < b[1])
             bin_name = "{0} <= {1} < {2}".format(b[0], column_name, b[1])
@@ -499,20 +473,18 @@ class DataTable(object):
         """
         if not isinstance(column_names, (list, tuple, set)):
             column_names = (column_names,)
-        cols = [c for c in self.columns if not c in column_names]
+        cols = [c for c in self.columns if c not in column_names]
 
         colindexes = [self.columns.index(cn) for cn in column_names]
         newdata = delete(self.data, colindexes, 1)
-        # newdata = copy.copy(self.data)
-        # for i in range(len(newdata)):
-        #    newdata[i] = [x for i, x in enumerate(newdata[i]) if i != colindex]
 
         t = DataTable(newdata, columns=cols, name=self.name, index=self.index)
         return t
 
     def reorder_columns(self, columns, fillval=""):
         """
-        Reorders the columns in the DataTable.  If a specified column does not exist it is filled with *fillval*
+        Reorders the columns in the DataTable.  If a specified column does not exist
+        it is filled with *fillval*
         """
         val = []
         for col in columns:
@@ -614,7 +586,7 @@ class DataTable(object):
                     + delim.join([str(x) for x in row])
                     + "\n"
                 )
-        except:
+        except:  # nopep8
             pass
         finally:
             if close_file:
@@ -669,7 +641,7 @@ class DataTable(object):
             for ix, x in enumerate(row):
                 try:
                     ws.write(irow, ix + 1, x)
-                except:
+                except:  # nopep8
                     ws.write(irow, ix + 1, str(x))
 
         if filename:
@@ -824,7 +796,8 @@ class DataTable(object):
 
         def var(self, axis=0, ddof=1):
             """
-            Computes the variance of a column (axis=0) or row (axis=1).  Computes the biased (sample) variance if ddof is 0.
+            Computes the variance of a column (axis=0) or row (axis=1).
+            Computes the biased (sample) variance if ddof is 0.
             Computes the unbiased variance if ddof=1.
             :param axis:
             :param ddof: Degrees of freedom
@@ -881,7 +854,8 @@ class DataTable(object):
 
         def var(self, axis=0, ddof=1):
             """
-            Computes the variance of a column (axis=0) or row (axis=1).  Computes the biased (sample) variance if ddof is 0.
+            Computes the variance of a column (axis=0) or row (axis=1).
+            Computes the biased (sample) variance if ddof is 0.
             Computes the unbiased variance if ddof=1.
             :param axis:
             :param ddof: Degrees of freedom
@@ -939,8 +913,9 @@ class DataTable(object):
 
     def rename_columns(self, rename_dict, inplace=False):
         """
-        Renames a set of columns.  The rename_dict has keys that are old column names and the values are
-        the new column names.  If inplace is True then this instance is modified, otherwise a new DataTable
+        Renames a set of columns.  The rename_dict has keys that are old
+        column names and the values are the new column names.  If inplace
+        is True then this instance is modified, otherwise a new DataTable
         is returned.
         """
         cols = [rename_dict.get(c, c) for c in self.columns]
@@ -1063,7 +1038,7 @@ def sample_table():
 
 def sample_table2(ncol, nrow):
     import string
-    from koala import pyarray
+    from dataclassic import pyarray
 
     keys = string.ascii_lowercase[:ncol]
     data = pyarray.pyndarray(shape=(nrow, ncol)).random_fill()

@@ -1,5 +1,5 @@
 """
-collections module
+doc_store module
 -------------------
 
 A JSON document store implemented on top of sqlite.
@@ -33,7 +33,9 @@ Use of the ? operator is highly encoured to defend agaist SQL injection attacks
     >>> s[0]['sides'] in (3,5)
     True
 
-Searching with a syntax similar to MongoDB is also supported (and preferred).  Available operators are:
+Searching with a syntax similar to MongoDB is also supported (and preferred).
+Available operators are:
+
     =======             ======================
     OP                  Equivalent SQL
     =======             ======================
@@ -197,9 +199,6 @@ class Database(object):
         """
         Gets a list of tables that are collections (JSON document stores)
         """
-        # c = [t for t in self.tables() if t.lower().startswith('collection_')]
-        # self.cursor.execute("select name from sqlite_master where type='table'" \
-        #     "and name like 'collection_%'")
 
         col = []
         for c in self.tables():
@@ -226,11 +225,8 @@ class Database(object):
         """
         Tells if a given table exists in the database
         """
-        # self.cursor.execute("select name from sqlite_master where type='table' and name='?';", table_name)
-        return table_name in self.tables()
 
-    # def create_function(self, name, param_count, func):
-    #    self.conn.create_function(name, param_count, func)
+        return table_name in self.tables()
 
     def encode(self, val):
         """
@@ -340,9 +336,10 @@ def opcodes(code):
 
 def render_op(d):
     """
-    Renders a query operation to sql specified by dict d. A query may look like {'$gt':{'a':2}}. This would
-    translate to the sql expresions 'a > 2'.  The syntax for sql injection prevention is used and
-    ? characters are put in place of the query parameters and a tuple of the parameters is returned
+    Renders a query operation to sql specified by dict d. A query may look like {'$gt':{'a':2}}.
+    This would translate to the sql expresions 'a > 2'.  The syntax for sql injection prevention is
+    used and ? characters are put in place of the query parameters and a tuple of the parameters is
+    returned
 
     :param dict d: a dict containing the query
     :returns str sql_text: the text of the sql command
@@ -484,7 +481,8 @@ class DocumentStore(object):
 
     def get_index_name(self, attribute_name):
         """
-        Gets the name of an index for the given attribute name.  It does not gaurantee the indexes existance.
+        Gets the name of an index for the given attribute name.
+        It does not gaurantee the indexes existance.
         It simply constructs the name
         """
         return "index_" + attribute_name + "_on_" + self.name
@@ -502,7 +500,8 @@ class DocumentStore(object):
         Adds an tables into the database name like *index_{attribute_name}_on_{table_name}.
         This index is joined to the collection table at query time and should speed up queries,
         as the json documents do not need to be decoded for the search.  This index table has two
-        columns: The attribute name (of type *sqltype*) and ID (the same ID as in the collection table
+        columns: The attribute name (of type *sqltype*) and ID (the same ID as in the collection
+        table
 
         Additionally a sqlite itself indexes this index table to make searches on it fast.
         """
@@ -539,7 +538,6 @@ class DocumentStore(object):
         """
         index_name = self.get_index_name(attribute_name)
 
-        # cmd_find = 'select ID, @' + attribute_name + ' as ' + attribute_name + ' from ' + self.table_name
         cmd_find = dialect.render_select(
             self.table_name,
             dict([("ID", "ID"), ("@" + attribute_name, attribute_name)]),
@@ -563,7 +561,7 @@ class DocumentStore(object):
                 ty = type(result[attribute_name])
                 sqltype = dialect.typemap[ty]
                 self.add_index(attribute_name, sqltype)
-            except:
+            except:  # nopep8
                 raise DocumentStoreNotFound(
                     'Index "{0}" not found and type '
                     "could not be inferred for auto creation.".format(index_name)
@@ -622,8 +620,8 @@ class DocumentStore(object):
         the values are the names of the index tables.
         """
         self._indexes = getattr(self, "_indexes", None)
-        if (not self._indexes) or (relook == True):
-            index_name_regex = re.compile("index_(\S+)_on_" + self.name)
+        if (not self._indexes) or (relook):
+            index_name_regex = re.compile(r"index_(\S+)_on_" + self.name)
 
             self._indexes = {}
 
@@ -640,7 +638,8 @@ class DocumentStore(object):
         Inserts a document into the collection table
 
         :param dict doc: the document (dict) to insert
-        :param bool upsert: If True and the document already exists, then the existing document is updated
+        :param bool upsert: If True and the document already exists,
+            then the existing document is updated
         """
 
         if is_dataclass(doc):
@@ -682,8 +681,9 @@ class DocumentStore(object):
                         )
                         conn.execute(cmd_update, (doc[attribute_name], doc["ID"]))
                 else:
-                    msg = "Document with id={0} already exists. To update use insert(..,upsert=True)".format(
-                        doc["ID"]
+                    msg = (
+                        "Document with id={0} already exists. "
+                        + f"To update use insert(..,upsert=True)".format(doc["ID"])
                     )
                     warn(msg)
 
@@ -694,11 +694,14 @@ class DocumentStore(object):
         Inserts multiple documents into the collection table
 
         :param docs: list of documents (dicts) to insert
-        :param cursor: a database connection cursor to use.  If this is None a new cursor is created
-        :param do_commit: whether or not to commit the changes after all documents have been inserted
+        :param cursor: a database connection cursor to use.  If this is None a new
+            cursor is created
+        :param do_commit: whether or not to commit the changes after all documents
+            have been inserted
 
-        Using the cursor and do_commit parameters are included for performance considerations.  The calling code
-        could provide an existing cursor and handle calling commit.  This can lead to performane improvements if
+        Using the cursor and do_commit parameters are included for performance
+        considerations.  The calling code could provide an existing cursor and
+        handle calling commit.  This can lead to performane improvements if
         many inserts and deletes are being done.
         """
         cmd, __ = dialect.render_insert(
@@ -774,12 +777,14 @@ class DocumentStore(object):
         Deletes multiple documents from the DocumentStore
 
         :param docs: list of documents (dicts) to delete
-        :param cursor: a database connection cursor to use.  If this is None a new cursor is created
-        :param do_commit: whether or not to commit the changes after all documents have been inserted
+        :param cursor: a database connection cursor to use.  If this is None a new
+            cursor is created
+        :param do_commit: whether or not to commit the changes after all documents
+            have been inserted
 
-        Using the cursor and do_commit parameters are included for performance considerations.  The calling code
-        could provide an existing cursor and handle calling commit.  This can lead to performane improvements if
-        many inserts and deletes are being done.
+        Using the cursor and do_commit parameters are included for performance considerations.
+        The calling code could provide an existing cursor and handle calling commit.
+        This can lead to performane improvements if many inserts and deletes are being done.
         """
         if not docs:
             return
@@ -816,8 +821,8 @@ class DocumentStore(object):
 
     def _resolve_attributes(self, sql_command, use_index=False):
         """
-        Searches for attributes in the sql command (prepended by an @ character) and replaces them with a
-        call to the user defined function *field*
+        Searches for attributes in the sql command (prepended by an @ character) and replaces them
+        with a call to the user defined function *field*
         """
         global attribute_regex
 
@@ -860,8 +865,9 @@ class DocumentStore(object):
 
         :param str clause: the *where* clause to use in the query
         :param int limit: the limit for the number of records to retrieve
-        :param bool full_record: if False then only the matching documents are returnd.  If True then the full
-                                 database row is returned (the document is still parsed back into a python object)
+        :param bool full_record: if False then only the matching documents are returnd.
+                                 If True then the full database row is returned
+                                 (the document is still parsed back into a python object)
 
         Examples:
 
@@ -988,39 +994,3 @@ class Find:
 
     def __str__(self):
         return f"{self._param_name} {self._op} {self._test_val}"
-
-
-# if __name__ == "__main__":
-#
-#     db = Database(':memory:')
-#
-#     animals = DocumentStore('animals', db)
-#
-#     d1 = {'Color':'Brown', 'Height':5.2,'Legs':4,'Species':'canine','face':{'nose':'smooshed'}}
-#     animals.insert(d1, key='pug')
-#     animals.insert({'Color':'White', 'Height':3.0,'Legs':4,'Species':'feline','face':{'nose':'normal'}}, key='persian cat')
-#     animals.insert({'Color':'Black', 'Height':6.0,'Legs':4,'Species':'canine','face':{'nose':'normal'}}, key='schnauzer')
-#     animals.db.cursor.execute('select document from collection_animals where key="dog"')
-#     print(animals.db.cursor.fetchall())
-#
-#     d2=animals.fetchone(key='pug')
-#     print(d1)
-#     print(d2)
-#     print(set(d1.keys()) == set(d2.keys()))
-#
-#     animals.add_index('Species')
-#
-#     animals.db.cursor.execute('select * from collection_animals where field(document,"Species")="canine"')
-#     res = animals.db.cursor.fetchall()
-#     canines = animals.find('@Species like "%ine"')
-#     print('Canines found')
-#     print(canines)
-#
-#     print('Smooshed Noses')
-#     print(animals.find('@face.nose = "smooshed"'))
-#
-#     print('All noses')
-#     print(animals.find('@face.nose in ("smooshed","normal") and @Species = "canine"'))
-#     a=1
-#
-#     #db.create_collection('animal',index_attributes=['size','color'])
