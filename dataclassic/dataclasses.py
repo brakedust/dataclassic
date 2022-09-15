@@ -149,6 +149,7 @@ def post_init_coersion(cls):
         # print('running post init')
         for f in fields(self):
             current_value = getattr(self, f.name)
+
             if "converter" in f.metadata and f.metadata["converter"]:
                 # if a converter funciton is defined run it
                 if current_value is Unset:
@@ -156,13 +157,6 @@ def post_init_coersion(cls):
 
                 current_value = f.metadata["converter"](current_value)
                 setattr(self, f.name, current_value)
-
-            if "validator" in f.metadata and f.metadata["validator"]:
-                # if a validator function is defined, then run it
-                if not f.metadata["validator"](self):
-                    raise DataClassicValidationError(
-                        f"Validation for {cls.__name__}.{f.name} failed."
-                    )
 
             elif is_dataclass(f.type):
                 if isinstance(current_value, dict):
@@ -233,6 +227,18 @@ def post_init_coersion(cls):
                                 for key, item_data in current_value.items()
                             },
                         )
+            else:
+                try:
+                    setattr(self, f.name, f.type(current_value))
+                except:
+                    pass
+
+            if "validator" in f.metadata and f.metadata["validator"]:
+                # if a validator function is defined, then run it
+                if not f.metadata["validator"](self):
+                    raise DataClassicValidationError(
+                        f"Validation for {cls.__name__}.{f.name} failed."
+                    )
 
     setattr(cls, "__post_init__", __post_init__)
 

@@ -2,7 +2,7 @@ import unittest
 from tests._test_tools import Raises
 
 # from dataclasses import dataclass
-from dataclassic.doc_store import DocumentStore, Database
+# from dataclassic.doc_store import DocumentStore, Database
 from dataclassic import dataclass, field, DataClassicValidationError
 
 from tests._test_setup import Shape, db, hexagon, triangle
@@ -29,3 +29,14 @@ class WeirdChairTest(unittest.TestCase):
         my_shape = Shape(ID="madeUpAgon", sides="8", color="yellow")
 
         self.assertEqual(8, my_shape.sides)
+
+    def test_default_coercion(self):
+        @dataclass
+        class Thing:
+            a: float = None
+            b: int = "11"
+
+        t = Thing("10.5", "11")
+
+        self.assertEqual(10.5, t.a)
+        self.assertEqual(11, t.b)
