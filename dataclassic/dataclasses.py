@@ -340,3 +340,17 @@ JSON_SCHEMA_TYPES = {
 }
 
 JSON_SCHEMA_FORMATS = {UUID: "UUID", datetime: "date-time"}
+
+
+def to_json(dc_obj):
+    from json import dumps
+
+    return dumps(asdict(dc_obj))
+
+
+def from_json(json_string: str, dtype):
+
+    from json import loads
+
+    data = loads(json_string)
+    return dtype(**data)

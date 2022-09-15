@@ -160,7 +160,7 @@ def array(x, *args, **kwargs):
 
 
 class pyndarray:
-    def __init__(self, data=None, shape=None, fill=0.0, allow_nan=True):
+    def __init__(self, data=None, shape=None, fill=0.0, allow_nan=True, name=None):
         """
 
         :type data: pyndarray, list, number
@@ -174,6 +174,7 @@ class pyndarray:
         self.ndim = None
         self.allow_nan = allow_nan
         self._data = None
+        self.name = name
 
         if data is None and shape is not None:
             self.ndim = len(self.shape)

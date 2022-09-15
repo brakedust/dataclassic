@@ -48,8 +48,7 @@ class ParseError(Exception):
     pass
 
 
-# @wraps(field_)
-def field(*, is_flag=False, **kwargs) -> Field:
+def argument(*, is_flag=False, **kwargs) -> Field:
 
     if "metadata" not in kwargs:
         kwargs["metadata"] = {}
@@ -60,6 +59,9 @@ def field(*, is_flag=False, **kwargs) -> Field:
         kwargs["default"] = False
 
     return field_(**kwargs)
+
+
+field = argument
 
 
 class Program:
@@ -85,8 +87,8 @@ class Program:
         if not args:
             args = sys.argv[1:]
 
-        print(f"{sys.argv=}")
-        print(f"{args=}")
+        # print(f"{sys.argv=}")
+        # print(f"{args=}")
 
         if not args:
             # no arguments supplied in any way
@@ -95,7 +97,8 @@ class Program:
             print("----------------------")
             for cmd in self.commands:
                 print(cmd)
-                return exec_stack
+
+            return exec_stack
 
         # exec_stack = []
         lenargs = len(args)
@@ -130,6 +133,10 @@ class Program:
     def parse_and_execute(self, args=None):
 
         stack = self.parse_command_line(args)
+
+        if "-h" in sys.argv or "--help" in sys.argv:
+            return
+
         if stack:
             return self.execute(stack)
 
@@ -205,7 +212,8 @@ def command(cls: type = None, *, name=None, program=None):
 
         if "-h" in inargs or "--help" in inargs:
             print(cls.help())
-            raise ParseError()
+            return None
+            # raise ParseError()
 
         # self = cls()
         args = []
