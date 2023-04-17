@@ -2,20 +2,10 @@ from copy import deepcopy
 from dataclassic.dataclasses import asdict
 from .tables import DataTable
 from .pyarray import pyndarray
+from typing import Callable
 
-from dataclassic.pyarray import (
-    array,
-    transpose,
-    append,
-    delete,
-    pyndarray,
-    min,
-    max,
-    mean,
-    sum,
-    var,
-    std,
-)
+from dataclassic.pyarray import array, pyndarray, slice_to_range
+from dataclassic.tables import DataTable
 
 array_type = pyndarray
 array_copy = deepcopy
@@ -36,20 +26,21 @@ def sigdigits(x, n, format_code="g"):
 
 class DataClassTable:
     def __init__(self, data: list, name: str = None, dtype: type = None):
-
         self.name = name
         self.data = data
+        self.history = []
 
         if dtype is None:
-            self.dtype = type(self._data[0])
+            self.dtype = type(self.data[0])
         else:
             self.dtype = dtype
 
         self.metadata = {}
 
+        self.loc = TableView(self)
+
     @property
     def columns(self):
-
         return list(self.dtype.__dataclass_fields__.keys())
 
     @property
@@ -62,19 +53,18 @@ class DataClassTable:
         :param args:
         :return:
         """
-        # if isinstance(args, slice):
-        #    return DataTable(self.data[args], columns=self.columns)
-        # if isinstance(args, int):
-        #    return DataTable([self.data[args]], columns=self.columns)
-        # else:
-        return self.get_column(args)
+        if isinstance(args, (list, tuple)):
+            for c in args:
+                if c not in self.columns:
+                    raise KeyError(f"Column '{c}' not found in Columns: {self.columns}")
+            return DataTable.from_column_dict({c: self.get_column(c) for c in args})
+        elif isinstance(args, str):
+            return self.get_column(args)
 
-    def get_column(self, col):
-
+    def get_column(self, col) -> list:
         return [getattr(x, col, None) for x in self.data]
 
-    def __repr__(self):
-
+    def __repr__(self) -> str:
         if self.name not in ("", None):
             retval = "Name: {0}\n".format(self.name)
         else:
@@ -84,20 +74,24 @@ class DataClassTable:
             for k in self.metadata:
                 retval += "{0}: {1}\n".format(k, self.metadata[k])
 
+        # get width of column names
         columns = [str(c) for c in self.columns]
         colwidth1 = [len(cn) for cn in columns]
+
+        # get width of column values
         colwidth2 = []
         for colname in self.columns:
             colwidth2.append(max([len(str(sigdigits(x, 5))) for x in self[colname]]))
 
+        # compute final width of columns for display
         colwidth = array([colwidth1, colwidth2]).max(axis=0)
         colwidth = [cw + 2 for cw in colwidth]
 
         lindex = max([len(str(ind)) for ind in self.index])
 
         retval += " " * lindex
-        for icol, item in enumerate(columns):
-            fmt = "{0:>" + str(colwidth[icol]) + "}"
+        for width, item in zip(colwidth, columns):
+            fmt = f"{{0:>{width}}}"
             retval += fmt.format(item)
         retval += "\n"
 
@@ -115,6 +109,77 @@ class DataClassTable:
             retval += "\n"
 
         return retval
+
+    def __len__(self):
+        return len(self.data)
+
+    def where(self, predicate: Callable):
+        """
+        Returns a new DataClassTable where the rows have been filtered
+        """
+        return DataClassTable(
+            [row for row in self.data if predicate(row)],
+            dtype=self.dtype,
+            name=self.name,
+        )
+
+    def head(self, n=5):
+        newtable = DataClassTable(
+            data=self.data[:n],
+            dtype=self.dtype,
+            name=self.name,
+        )
+        newtable.history.append(f".head(n={n})")
+        return newtable
+
+
+class TableView:
+    def __init__(self, table: DataClassTable):
+        self.table: DataClassTable = table
+
+    def __getitem__(self, args):
+        if len(args) == 0 or len(args) > 2:
+            return None
+        elif (len(args)) == 1:
+            irow = args[0]
+            icol = None
+        elif len(args) == 2:
+            irow, icol = args
+
+        if isinstance(irow, slice):
+            irow = slice_to_range(irow, self.table.data, 0)
+        if isinstance(icol, slice):
+            icol = slice_to_range(icol, self.table.columns, 0)
+
+        if icol is None:
+            if irow is None:
+                return None
+
+            elif isinstance(irow, int):
+                return self.table.data[irow]
+
+            elif isinstance(irow, (list, tuple, set, range)):
+                return [d for i, d in self.table.data if i in irow]
+        elif isinstance(icol, int):
+            colname = self.table.columns[icol]
+            if irow is None:
+                return self.table.get_column(colname)
+            elif isinstance(irow, int):
+                return getattr(self.table.data[irow], colname)
+            elif isinstance(irow, (list, tuple, set, range)):
+                return [getattr(self.table.data[jrow], colname) for jrow in irow]
+
+        elif isinstance(icol, (list, tuple, set, range)):
+            colnames = [self.table.columns[jcol] for jcol in icol]
+            if irow is None:
+                return [self.table.get_column(cn) for cn in colnames]
+            elif isinstance(irow, int):
+                return [getattr(self.table.data[irow], cn) for cn in colnames]
+            elif isinstance(irow, (list, tuple, set, range)):
+                return [
+                    [getattr(self.table.data[jrow], cn) for cn in colnames]
+                    for jrow in irow
+                ]
 
 
 # class ColumnView:

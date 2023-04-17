@@ -1,6 +1,10 @@
 import zlib
 
+# try:
+#     import ujson as json
+# except ImportError:
 import json
+
 
 # try:
 #     import ujson as json

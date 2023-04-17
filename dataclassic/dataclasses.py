@@ -61,6 +61,13 @@ from uuid import UUID
 
 from functools import wraps
 
+try:
+    import numpy
+
+    HAS_NUMPY = True
+except ImportError:
+    HAS_NUMPY = False
+
 __all__ = [
     "post_init_coersion",
     "is_dataclass",
@@ -107,6 +114,7 @@ def field(
     validator=None,
     doc=None,
     exclude_from_tree=False,
+    json_key=None,
     nargs=1,
 ) -> Field:
 
@@ -118,6 +126,7 @@ def field(
     metadata_["doc"] = doc
     metadata_["exclude_from_tree"] = exclude_from_tree
     metadata_["nargs"] = nargs
+    metadata_["json_key"] = json_key
 
     return field_(
         default=default,
@@ -170,6 +179,8 @@ def post_init_coersion(cls):
 
                 subtype = f.type.__args__[-1]
                 if f.type.__origin__ is list:
+                    if (current_value) is None:
+                        return []
                     # handle generic lists
                     if len(current_value) == 0:
                         continue
@@ -268,7 +279,7 @@ def get_schema(cls):
         t = _field.type
         # for name, t in self._fields.items():
         d["properties"][name] = {}
-        d["properties"][name]["type"] = JSON_SCHEMA_TYPES.get(t, t.__name__)
+        d["properties"][name]["type"] = get_schema_type(t)
         if "doc" in _field.metadata:
             d["properties"][name]["description"] = (
                 _field.metadata["doc"].replace("\n", " ").strip()
@@ -307,7 +318,11 @@ def _asdict_inner(obj, dict_factory, skip_fields):
             if val is Unset:
                 continue
             value = _asdict_inner(val, dict_factory, skip_fields)
-            result.append((f.name, value))
+
+            # if the field has "json_key" defined, it should be serialized
+            # with that key, rather than the field name
+            key = f.name if f.metadata["json_key"] is None else f.metadata["json_key"]
+            result.append((key, value))
         return dict_factory(result)
     elif isinstance(obj, tuple) and hasattr(obj, "_fields"):
         return type(obj)(*[_asdict_inner(v, dict_factory, skip_fields) for v in obj])
@@ -326,6 +341,10 @@ def _asdict_inner(obj, dict_factory, skip_fields):
         return obj.value
     elif isinstance(obj, date):
         return str(obj)
+    elif HAS_NUMPY and isinstance(obj, numpy.ndarray):
+        dtype = type(obj[0])
+        converter = JSON_TYPE_CONVERTERS[dtype]
+        return [converter(x) for x in obj]
     else:
         return copy.deepcopy(obj)
 
@@ -347,6 +366,35 @@ JSON_SCHEMA_TYPES = {
 
 JSON_SCHEMA_FORMATS = {UUID: "UUID", datetime: "date-time"}
 
+JSON_TYPE_CONVERTERS = {
+    float: float,
+    int: int,
+    str: str,
+}
+
+if HAS_NUMPY:
+    JSON_SCHEMA_TYPES[numpy.ndarray] = "array"
+    JSON_SCHEMA_TYPES[numpy.int64] = "integer"
+    JSON_SCHEMA_TYPES[numpy.int32] = "integer"
+    JSON_SCHEMA_TYPES[numpy.float64] = "float"
+
+    JSON_TYPE_CONVERTERS |= {
+        numpy.float64: float,
+        numpy.int64: int,
+        numpy.int32: int,
+        numpy.str_: str,
+    }
+
+
+def get_schema_type(obj):
+
+    if is_generic_container(obj):
+        # subtype = f.type.__args__[-1]
+        # obj = obj.type.__origin__ is list:
+        obj = obj.__origin__
+
+    return JSON_SCHEMA_TYPES.get(obj, obj.__name__)
+
 
 def to_json(dc_obj):
     from json import dumps
@@ -356,7 +404,26 @@ def to_json(dc_obj):
 
 def from_json(json_string: str, dtype):
 
-    from json import loads
+    try:
+        from ujson import loads
+    except ImportError:
+        from json import loads
 
-    data = loads(json_string)
+    data: dict = loads(json_string)
+
+    return from_dict(data, dtype)
+
+    # for f in fields(dtype):
+    #     key = f.name if f.metadata["json_key"] is None else f.metadata["json_key"]
+    #     data[f.name] = data.pop(key)
+    # return dtype(**data)
+
+
+def from_dict(data: dict, dtype):
+
+    for f in fields(dtype):
+        key = f.name if f.metadata["json_key"] is None else f.metadata["json_key"]
+        if key in data:
+            data[f.name] = data.pop(key)
+
     return dtype(**data)

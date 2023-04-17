@@ -33,14 +33,15 @@ Example:
 
 """
 import sys
-from functools import partial
-from dataclasses import Field
+from functools import wraps
 from dataclassic.dataclasses import (
     fields,
+    Field,
     MISSING,
     JSON_SCHEMA_TYPES,
+    get_schema_type,
     dataclass,
-    field as field_,
+    field_,
 )
 
 
@@ -48,27 +49,64 @@ class ParseError(Exception):
     pass
 
 
-def argument(*, is_flag=False, **kwargs) -> Field:
+@wraps(field_)
+def argument(
+    *,
+    default=MISSING,
+    default_factory=MISSING,
+    repr=True,
+    hash=None,
+    init=True,
+    compare=True,
+    metadata=None,
+    converter=None,
+    validator=None,
+    doc=None,
+    exclude_from_tree=False,
+    nargs=1,
+    is_flag=False,
+    alias=None,
+) -> Field:
 
-    if "metadata" not in kwargs:
-        kwargs["metadata"] = {}
+    metadata_ = {}  # if metadata is None else metadata
+    if metadata:
+        metadata_.update(metadata)
+    metadata_["converter"] = converter
+    metadata_["validator"] = validator
+    metadata_["doc"] = doc
+    metadata_["exclude_from_tree"] = exclude_from_tree
+    metadata_["nargs"] = nargs
+    metadata_["converter"] = converter
+    metadata_["validator"] = validator
+    metadata_["doc"] = doc
+    metadata_["exclude_from_tree"] = exclude_from_tree
+    metadata_["nargs"] = nargs
+    metadata_["is_flag"] = is_flag
 
-    kwargs["metadata"]["is_flag"] = is_flag
+    if is_flag and default is MISSING:
+        default = False
 
-    if is_flag and ("default" not in kwargs):
-        kwargs["default"] = False
+    metadata_["alias"] = alias
 
-    return field_(**kwargs)
+    return field_(
+        default=default,
+        default_factory=default_factory,
+        repr=repr,
+        hash=hash,
+        init=init,
+        compare=compare,
+        metadata=metadata_,
+    )
 
 
-field = argument
+# field = argument
 
 
 class Program:
-    def __init__(self, name=""):
+    def __init__(self, name="", pipeline=False):
 
         self.name = name
-
+        self.is_pipline_program = pipeline
         self.commands = {}
 
         # self.exec_stack = []
@@ -126,7 +164,10 @@ class Program:
 
         values = None
         for i, cmd_info in enumerate(exec_stack):
-            values = cmd_info[2].execute(values)
+            if self.is_pipline_program:
+                values = cmd_info[2].execute(values)
+            else:
+                cmd_info[2].execute()
 
         return values
 
@@ -171,12 +212,17 @@ def command(cls: type = None, *, name=None, program=None):
     def do_something:
         pass
     """
+    if isinstance(cls, str):
+        name = cls
+        cls = None
 
     def wrapper(cls):
         return command(cls, name=name, program=program)
 
     if cls is None:
         return wrapper
+
+    cls = dataclass(cls)
 
     cls.name = name if name else cls.__name__
 
@@ -253,13 +299,15 @@ def command(cls: type = None, *, name=None, program=None):
 
         # ----------------------
         # Handle positional arguments
+        print(inargs)
         args = []
         for f in cls._arguments:
             nargs = f.metadata.get("nargs", 1)
             if nargs in ("*",):
-                args.append(list(inargs))
-                inargs = []
-            if nargs in ("+",):
+                if inargs:
+                    args.append(list(inargs))
+                    inargs = []
+            elif nargs in ("+",):
                 if len(inargs) == 0:
 
                     raise ParseError(
@@ -290,7 +338,7 @@ def command(cls: type = None, *, name=None, program=None):
         text.append("\nPositional Arguments\n--------------------")
         for f in cls._arguments:
             text.append(
-                f"{f.name} \n    type = {JSON_SCHEMA_TYPES[f.type]}\n"
+                f"{f.name} \n    type = {get_schema_type(f.type)}\n"
                 + f"    count = {f.metadata.get('nargs',1)}"
             )
 

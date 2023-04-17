@@ -88,7 +88,7 @@ import sqlite3
 import uuid
 from warnings import warn
 
-from dataclassic.dataclasses import asdict, is_dataclass
+from dataclassic.dataclasses import asdict, is_dataclass, from_dict
 from dataclassic.encoders import JsonEncoder, ZlibEncoder
 from dataclassic.sql_helper import Column, Relationship, dialects
 from dataclassic.sql_helper import sqlite_dialect as dialect
@@ -334,7 +334,7 @@ def opcodes(code):
     return codes[code]
 
 
-def render_op(d):
+def render_op(d, attrPrefix=""):
     """
     Renders a query operation to sql specified by dict d. A query may look like {'$gt':{'a':2}}.
     This would translate to the sql expresions 'a > 2'.  The syntax for sql injection prevention is
@@ -348,6 +348,11 @@ def render_op(d):
     opname = list(d.keys())[0]
     func_str = opcodes(opname)[0]
     render_func = opcodes(opname)[1]
+    if attrPrefix:
+        d[opname] = {
+            (f"{attrPrefix}{k}" if not k.startswith(attrPrefix) else k): v
+            for k, v in d[opname].items()
+        }
     return render_func(func_str, d[opname])
 
 
@@ -501,9 +506,11 @@ class DocumentStore(object):
         This index is joined to the collection table at query time and should speed up queries,
         as the json documents do not need to be decoded for the search.  This index table has two
         columns: The attribute name (of type *sqltype*) and ID (the same ID as in the collection
-        table
+        table.
 
-        Additionally a sqlite itself indexes this index table to make searches on it fast.
+        sqltype may be: REAL, INTEGER, TEXT, BLOB
+
+        Additionally sqlite itself indexes this index table to make searches on it fast.
         """
         index_name = self.get_index_name(attribute_name)
 
@@ -916,11 +923,12 @@ class DocumentStore(object):
             from dataclasses import is_dataclass
 
             if is_dataclass(dtype):
-                results = [dtype(**res) for res in results]
+                # results = [dtype(**res) for res in results]
+                results = [from_dict(res, dtype) for res in results]
 
         return results
 
-    def find2(self, where=None, limit=None, echo_sql=False):
+    def find2(self, where=None, limit=None, dtype=None, echo_sql=False):
         """
         Search the colleciton using mongodb like syntax like:
         {'$gt':{'a':2}}
@@ -929,11 +937,17 @@ class DocumentStore(object):
         """
 
         if where is not None:
-            where_clause, params = render_op(where)
+            where_clause, params = render_op(where, attrPrefix="@")
         else:
             where_clause, params = None, None
 
-        return self.find(where_clause, params, limit, echo_sql)
+        return self.find(
+            clause=where_clause,
+            params=params,
+            limit=limit,
+            dtype=dtype,
+            echo_sql=echo_sql,
+        )
 
     def __eq__(self, other):
 
@@ -994,3 +1008,7 @@ class Find:
 
     def __str__(self):
         return f"{self._param_name} {self._op} {self._test_val}"
+
+    def _render(self):
+        op_str, params = render_op({self._op: {self._param_name: self._test_val}}, "@")
+        return op_str, params

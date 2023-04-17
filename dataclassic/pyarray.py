@@ -82,7 +82,6 @@ class NANType:
     instance = None
 
     def __init__(self):
-
         if NANType.instance is None:
             NANType.instance = self
         else:
@@ -287,7 +286,6 @@ class pyndarray:
         return newobj
 
     def where(self, mask):
-
         if self.ndim == 1:
             data = [self[i] for i in range(self.shape[0]) if mask[i]]
         elif self.ndim == 2:
@@ -328,7 +326,6 @@ class pyndarray:
             return pyndarray(self._data)
 
     def transpose(self):
-
         newobj = pyndarray(shape=tuple(reversed(self.shape)))
 
         for indexes in multirange(*self.shape):
@@ -339,7 +336,6 @@ class pyndarray:
         return newobj
 
     def __getitem__(self, args):
-
         if not hasattr(args, "__getitem__"):
             args = [args]
 
@@ -361,6 +357,12 @@ class pyndarray:
             # print(self._data, ranges)
             newobj = get_data_range(self._data, ranges)
 
+        elif len(args) == 2 and (
+            isinstance(args[0], (tuple, list)) and isinstance(args[1], slice)
+        ):
+            new_data = [self._data[irow][args[1]] for irow in args[0]]
+            return pyndarray(new_data)
+
         else:
             newobj = self._data
             for arg in args:
@@ -381,7 +383,6 @@ class pyndarray:
         return newobj
 
     def is_column_vector(self):
-
         try:
             part1 = all(len(row) == 1 for row in iter(self))
             if part1:
@@ -394,11 +395,9 @@ class pyndarray:
             return False
 
     def __iter__(self):
-
         return (self[i] for i in range(len(self._data)))
 
     def __setitem__(self, args, value):
-
         if not hasattr(args, "__getitem__"):
             args = [args]
 
@@ -442,12 +441,10 @@ class pyndarray:
             d[args[-1]] = value
 
     def __repr__(self):
-
         # return 'pyndarray(data={0})'.format(repr(self._data))
         return self.__str__()
 
     def __str__(self):
-
         try:
             lines = []
             if self.ndim == 1:
@@ -485,12 +482,10 @@ class pyndarray:
         return (self[:, j] for j in range(self.shape[1]))
 
     def itervals(self):
-
         for indexes in multirange(*self.shape):
             yield self[indexes]
 
     def __add__(self, other):
-
         # newobj = pyndarray(shape=self.shape)
         newobj = copy.deepcopy(self)
 
@@ -507,7 +502,6 @@ class pyndarray:
         return self.__add__(other)
 
     def __sub__(self, other):
-
         # newobj = pyndarray(shape=self.shape)
         newobj = copy.deepcopy(self)
 
@@ -524,7 +518,6 @@ class pyndarray:
         return self.__add__(other)
 
     def __mul__(self, other):
-
         # newobj = pyndarray(shape=self.shape)
         newobj = copy.deepcopy(self)
 
@@ -541,7 +534,6 @@ class pyndarray:
         return self.__mul__(other)
 
     def __truediv__(self, other):
-
         # newobj = pyndarray(shape=self.shape)
         newobj = copy.deepcopy(self)
 
@@ -570,7 +562,6 @@ class pyndarray:
         return self.__truediv__(other)
 
     def __abs__(self):
-
         newobj = pyndarray(shape=self.shape)
 
         for indexes in multirange(*self.shape):
@@ -579,7 +570,6 @@ class pyndarray:
         return newobj
 
     def __round__(self, n):
-
         newobj = pyndarray(shape=self.shape)
 
         for indexes in multirange(*self.shape):
@@ -588,31 +578,24 @@ class pyndarray:
         return newobj
 
     def __eq__(self, other):
-
         return self.__compare_elements(other, eq)
 
     def __ne__(self, other):
-
         return self.__compare_elements(other, ne)
 
     def __lt__(self, other):
-
         return self.__compare_elements(other, lt)
 
     def __gt__(self, other):
-
         return self.__compare_elements(other, gt)
 
     def __le__(self, other):
-
         return self.__compare_elements(other, lte)
 
     def __ge__(self, other):
-
         return self.__compare_elements(other, gte)
 
     def __compare_elements(self, other, op):
-
         newobj = pyndarray(shape=self.shape, fill=False)
 
         if isinstance(other, (list, tuple, pyndarray)):
@@ -625,7 +608,6 @@ class pyndarray:
         return newobj
 
     def __neg__(self):
-
         newobj = copy.deepcopy(self)
 
         for indexes in multirange(*self.shape):
@@ -634,7 +616,6 @@ class pyndarray:
         return newobj
 
     def __mod__(self, other):
-
         newobj = copy.deepcopy(self)
 
         if not hasattr(other, "__getitem__"):
@@ -647,7 +628,6 @@ class pyndarray:
         return newobj
 
     def __pow__(self, exponent):
-
         newobj = copy.deepcopy(self)
 
         if not hasattr(exponent, "__getitem__"):
@@ -749,7 +729,6 @@ class pyndarray:
         return self.index(min(self))
 
     def argsort(self, axis=0, i=0):
-
         if self.ndim == 1:
             return list(zip(*list(sorted(enumerate(self._data), key=lambda x: x[1]))))[
                 0
@@ -760,7 +739,7 @@ class pyndarray:
                     zip(*list(sorted(enumerate(self._data[:, i]), key=lambda x: x[1])))
                 )[0]
             elif axis == 1:
-                list(
+                return list(
                     zip(*list(sorted(enumerate(self._data[i, :]), key=lambda x: x[1])))
                 )[0]
 
@@ -768,7 +747,6 @@ class pyndarray:
         return self.apply_func(sum, axis)
 
     def __and__(self, other):
-
         result = pyndarray(shape=self.shape, fill=NAN)
 
         for indexes in multirange(*self.shape):
@@ -777,7 +755,6 @@ class pyndarray:
         return result
 
     def __or__(self, other):
-
         result = pyndarray(shape=self.shape)
 
         for indexes in multirange(*self.shape):
@@ -786,14 +763,12 @@ class pyndarray:
         return result
 
     def all(self):
-
         for indexes in multirange(*self.shape):
             if not self[indexes]:
                 return False
         return True
 
     def any(self):
-
         for indexes in multirange(*self.shape):
             if self[indexes]:
                 return True
@@ -818,7 +793,6 @@ class ArrayView(pyndarray):
 # primitive functions
 ######################################
 def mean(x):
-
     return sum(x) / len(x)
 
 
@@ -833,7 +807,6 @@ def std(x, ddof=1, mn=None):
 
 
 def product(*args):
-
     result = 1
     for arg in args:
         result *= arg
@@ -933,7 +906,6 @@ def eye(m):
 
 
 if __name__ == "__main__":
-
     x = pyndarray(shape=(3, 6))
     y = pyndarray(shape=(10, 5)).random_fill()
     y = y * 2 - 1

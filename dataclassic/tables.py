@@ -140,7 +140,6 @@ class DataTable(object):
             self.columns = copy.copy(columns)
 
         if data is not None:
-
             if isinstance(data, type(self)):
                 # this is essentially a copy constructor.
                 self.columns = copy.copy(data.columns)
@@ -170,7 +169,6 @@ class DataTable(object):
     def from_column_dict(
         data: dict[str, list], name: str = None, dtype: type = object
     ) -> "DataTable":
-
         column_names = list(data.keys())
 
         arr = array([data[col] for col in column_names], dtype=object)
@@ -190,7 +188,6 @@ class DataTable(object):
         fillval: object = None,
         dtype: type = object,
     ) -> "DataTable":
-
         columns = list(data[0].keys())  # get column names from first item
 
         # now ensure we have all of the column names, but keep the order of
@@ -288,6 +285,8 @@ class DataTable(object):
         # print(cols)
         for col in cols:
             if isinstance(col, str):
+                # if col not in self.columnns:
+                #     raise KeyError(col)
                 colnames.append(col)
                 colnums.append(self.columns.index(col))
 
@@ -337,7 +336,6 @@ class DataTable(object):
             #    self.data[i][cindex] = values[i]
 
         else:
-
             self.columns.append(column)
 
             if len(self.data) > 0:
@@ -432,7 +430,6 @@ class DataTable(object):
         return groups
 
     def bin_by(self, column_name, nbins, lazy_eval=False):
-
         group_values = set(self[column_name])
         ming = min(group_values)
         maxg = max(group_values)
@@ -511,7 +508,6 @@ class DataTable(object):
             )
 
     def __repr__(self):
-
         if self.name not in ("", None):
             retval = "Name: {0}\n".format(self.name)
         else:
@@ -556,25 +552,27 @@ class DataTable(object):
     def __str__(self):
         return self.__repr__()
 
-    def to_csv(self, fileobj, delim="\t", close_file=False):
+    def to_csv(self, fileobj, delim=",", close_file=False):
         """
         Writes the DataTable to a csv file
         :param fileobj:
         :param delim:
         :return:
         """
-        if isinstance(fileobj, str):
+        from pathlib import Path
+
+        if isinstance(fileobj, (str, Path)):
             fileobj = open(fileobj, "w")
             close_file = True
 
         try:
-            if self.name is not None:
-                fileobj.write("__TableName__{0}{1}\n".format(delim, self.name))
+            # if self.name is not None:
+            #     fileobj.write("__TableName__{0}{1}\n".format(delim, self.name))
 
-            for k in self.metadata:
-                fileobj.write(
-                    "__metadata__{0}{1}{0}{2}\n".format(delim, k, self.metadata[k])
-                )
+            # for k in self.metadata:
+            #     fileobj.write(
+            #         "__metadata__{0}{1}{0}{2}\n".format(delim, k, self.metadata[k])
+            #     )
 
             cols = self.columns
             fileobj.write(delim + delim.join(cols) + "\n")
@@ -596,10 +594,10 @@ class DataTable(object):
         """
         Writes the DataTable to an excel file
         """
-        import xlwt
+        import openpyxl
 
         if not wb:
-            wb = xlwt.Workbook()
+            wb = openpyxl.Workbook()
 
         if self.name:
             ws = wb.add_sheet(self.name)
@@ -620,13 +618,13 @@ class DataTable(object):
 
         # write column names
         # header_style = xlwt.easyxf("font: bold on; align: wrap on, vert centre, horiz center")
-        fnt = xlwt.Font()
+        fnt = openpyxl.Font()
         fnt.bold = True
         fnt.height = 240
         # fnt.name = 'Calibri'
-        aln = xlwt.Alignment()
+        aln = openpyxl.Alignment()
         aln.horz = aln.HORZ_CENTER
-        header_style = xlwt.XFStyle()
+        header_style = openpyxl.XFStyle()
         header_style.font = fnt
         header_style.alignment = aln
 
@@ -662,7 +660,6 @@ class DataTable(object):
             fileobj = open(fileobj, "r")
 
         with fileobj:
-
             line = fileobj.readline().strip("\n")
             name = None
             if line.startswith("__TableName__"):
@@ -693,7 +690,6 @@ class DataTable(object):
         #    fileobj.close()
 
     def to_html(self, filename=None):
-
         html = """
 <body>
   <h1> {name} </h1>
@@ -925,13 +921,13 @@ class DataTable(object):
             return DataTable(self.data, columns=self.cols, index=self.index)
 
     @staticmethod
-    def merge(*tables, **kwargs):
+    def concat(*tables, fillval=None):
         """
         :param tables: DataTable objects to combine
         :param **kwargs: fillval - default = None
         """
 
-        fillval = kwargs.get("fillval", None)
+        # fillval = kwargs.get("fillval", None)
 
         tables = [t for t in tables if t is not None]
         # all_cols = copy.copy(tables[0].columns)
@@ -950,16 +946,52 @@ class DataTable(object):
 
         return big_table
 
+    def join(table1: "DataTable", table2: "DataTable", on: str, how="inner"):
+        """
+        Joins two tables together based on a common key columns (**on**)
+        """
+        table1 = table1.sort(on)
+        table2 = table2.sort(on)
+
+        col1 = table1[on]
+        # table1 = table1.sort(on)
+        col2 = table2[on]
+        # table2 = table1.sort(on)
+        table2 = table2.drop([on])
+
+        common = set(col1).intersection(set(col2))
+        row_index1 = [i for i, c in enumerate(col1) if c in common]
+        row_index2 = [i for i, c in enumerate(col2) if c in common]
+
+        colnames1 = list(table1.columns)
+        colnames2 = list(table2.columns)
+        # colnames2.remove(on)
+
+        new_column_names = colnames1 + colnames2
+
+        rows = []
+        for ri1, ri2 in zip(row_index1, row_index2):
+            rows.append(table1.data._data[ri1] + table2.data._data[ri2])
+
+        return DataTable(rows, columns=new_column_names)
+
+    def head(self, n=5):
+        newtable = DataTable(
+            data=self.data[:n],
+            name=self.name,
+        )
+        # newtable.history.appen(f".head(n={n})")
+        return newtable
+
 
 class RowView:
     def __init__(self, table: DataTable):
         self.table: DataTable = table
 
     def __getitem__(self, index):
-        return self.table.data[index, :]
+        return DataTable(self.table.data[index, :], self.table.columns)
 
     def __setitem__(self, index, val):
-
         if index >= len(self.table.data):
             raise IndexError("Speficied index is large than the number of rows.")
 
@@ -976,7 +1008,6 @@ class ColumnView:
         self.table: DataTable = table
 
     def __getitem__(self, columns):
-
         if not isinstance(columns, (list, set, tuple)):
             columns = [columns]
 
@@ -1003,7 +1034,6 @@ class ColumnView:
             return new_data_set
 
     def __setitem__(self, column, values=None, fillval=0):
-
         # def set_column(self, column, values=None, fillval=0):
         """
         Sets the values for a given column

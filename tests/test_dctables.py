@@ -36,3 +36,13 @@ data = [triangle, rectangle, pentagon, hexagon]
 t = DataClassTable(data, name="Shapes", dtype=Shape)
 
 print(repr(t))
+
+print(t.get_column("color"))
+assert t.get_column("color") == ["red", "blue", "red", "green"]
+
+assert t.loc[1, (1, 2)] == [4, "blue"]
+assert t.loc[(1, 2), (1, 2)] == [[4, "blue"], [5, "red"]]
+assert t.loc[(1, 2), 0] == ["rectangle", "pentagon"]
+assert t.loc[1, 2, 3] is None
+assert t.loc[(1, 2), 1:3] == [[4, "blue"], [5, "red"]]
+assert t.loc[1:3, 1:3] == [[4, "blue"], [5, "red"]]

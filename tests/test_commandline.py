@@ -1,10 +1,10 @@
-# from koala.dataclasses import dataclass, post_init_coersion, field
+# from koala.dataclasses import dataclass, post_init_coersion, argument
 # from dataclasses import dataclass
 
 import sys
 from tests._test_tools import Raises
 
-from dataclassic.commandline import ParseError, command, Program, field, dataclass
+from dataclassic.commandline import ParseError, command, Program, argument, dataclass
 
 # from dataclasses import fields, MISSING
 # import pytest
@@ -14,16 +14,14 @@ prog = Program("booyeah")
 @prog.command
 @dataclass
 class greet:
-
-    name: str = field(doc="Name of the hero", nargs=2)
-    numbers: list[int] = field(
+    name: str = argument(doc="Name of the hero", nargs=2)
+    numbers: list[int] = argument(
         doc="favorite numbers", nargs="+"
     )  # , converter=list[int])
-    language: str = field(default="English", doc="Language spoken")
-    is_blue: bool = field(is_flag=True)
+    language: str = argument(default="English", doc="Language spoken")
+    is_blue: bool = argument(is_flag=True)
 
     def execute(self, *args):
-
         val = f"Hello.  {self.name[0]} {self.name[1]}'s favorite numbers are {', '.join(str(x) for x in self.numbers)} and they speak {self.language}."  # nopep8
         if self.is_blue:
             val += "\nThey are BLUE!!"
@@ -44,7 +42,6 @@ def test_parse_sys_argv():
 
 
 def test_parse_passed_args():
-
     # sys.argv = ["cmdline", "Super", "Bot", "42","17", "19", "--language", "Spanish"]
     args = ["greet", "Super", "Bot", 1, "2", "--language", "Spanish"]
     # cmd = greet.parse_args(args)
@@ -70,7 +67,6 @@ def test_error():
 
 
 def test_pipeline_program():
-
     args = [
         "greet",
         "Super",
