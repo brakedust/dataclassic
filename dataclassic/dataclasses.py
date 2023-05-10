@@ -51,15 +51,15 @@ Additional information on each field is stored in the metadata entry of the fiel
 
 import copy
 import typing
-from dataclasses import MISSING, dataclass as dataclass_
+from dataclasses import MISSING, Field
+from dataclasses import dataclass as dataclass_
 from dataclasses import field as field_
-from dataclasses import fields, is_dataclass, Field
+from dataclasses import fields, is_dataclass
 from datetime import date, datetime, timedelta
 from enum import Enum
+from functools import wraps
 from pathlib import Path
 from uuid import UUID
-
-from functools import wraps
 
 try:
     import numpy
@@ -117,7 +117,6 @@ def field(
     json_key=None,
     nargs=1,
 ) -> Field:
-
     metadata_ = {}  # if metadata is None else metadata
     if metadata:
         metadata_.update(metadata)
@@ -144,7 +143,6 @@ class DataClassicValidationError(Exception):
 
 
 def is_generic_container(cls):
-
     if hasattr(cls, "__origin__"):
         return True
 
@@ -154,7 +152,6 @@ def is_generic_container(cls):
 
 def post_init_coersion(cls):
     def __post_init__(self):
-
         # print('running post init')
         for f in fields(self):
             current_value = getattr(self, f.name)
@@ -176,7 +173,6 @@ def post_init_coersion(cls):
                     )
 
             elif is_generic_container(f.type):
-
                 subtype = f.type.__args__[-1]
                 if f.type.__origin__ is list:
                     if (current_value) is None:
@@ -212,7 +208,6 @@ def post_init_coersion(cls):
                             )
 
                 elif f.type.__origin__ is dict:
-
                     if len(current_value) == 0:
                         continue
 
@@ -321,8 +316,13 @@ def _asdict_inner(obj, dict_factory, skip_fields):
 
             # if the field has "json_key" defined, it should be serialized
             # with that key, rather than the field name
-            key = f.name if f.metadata["json_key"] is None else f.metadata["json_key"]
-            result.append((key, value))
+            if "json_key" in f.metadata:
+                key = (
+                    f.name if f.metadata["json_key"] is None else f.metadata["json_key"]
+                )
+                result.append((key, value))
+            else:
+                result.append((f.name, value))
         return dict_factory(result)
     elif isinstance(obj, tuple) and hasattr(obj, "_fields"):
         return type(obj)(*[_asdict_inner(v, dict_factory, skip_fields) for v in obj])
@@ -387,7 +387,6 @@ if HAS_NUMPY:
 
 
 def get_schema_type(obj):
-
     if is_generic_container(obj):
         # subtype = f.type.__args__[-1]
         # obj = obj.type.__origin__ is list:
@@ -403,7 +402,6 @@ def to_json(dc_obj):
 
 
 def from_json(json_string: str, dtype):
-
     try:
         from ujson import loads
     except ImportError:
@@ -420,7 +418,6 @@ def from_json(json_string: str, dtype):
 
 
 def from_dict(data: dict, dtype):
-
     for f in fields(dtype):
         key = f.name if f.metadata["json_key"] is None else f.metadata["json_key"]
         if key in data:

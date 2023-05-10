@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dataclassic"
-version = "0.1.6"
+version = "0.1.7"
 description = "Making dataclasses even more awesome"
 authors = ["Brakedust <brakedust7@proton.mail>"]
 
