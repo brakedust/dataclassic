@@ -1,63 +1,62 @@
-from dataclasses import is_dataclass
-import unittest
-from dataclassic.doc_store import DocumentStore, Database, Find
-from unittest import TestCase
+import pytest
 
-from tests._test_setup import Shape, triangle, rectangle, pentagon, hexagon
+from dataclassic import Database, DocumentStore, Find, is_dataclass
+from tests._test_setup import Shape, hexagon, pentagon, rectangle, triangle
 
 
-class TestPostInit(TestCase):
-    def setUp(self):
-        db = Database("sqlite:///:memory:")
-        shapes = DocumentStore("shapes", db, False, dtype=Shape)
-        chairs = DocumentStore("chairs", db, False)
-        return db, shapes, chairs
+# class TestPostInit(TestCase):
+def setUp():
+    db = Database("sqlite:///:memory:")
+    shapes = DocumentStore("shapes", db, False, dtype=Shape)
+    chairs = DocumentStore("chairs", db, False)
+    return db, shapes, chairs
 
-    def tearDown(self) -> None:
-        pass
 
-    def test_shapes(self):
+def tearDown(self) -> None:
+    pass
 
-        db, shapes, chairs = self.setUp()
 
-        shapes.insert_many((triangle, rectangle, pentagon, hexagon))
+def test_shapes():
+    db, shapes, chairs = setUp()
 
-        res = shapes.find(echo_sql=True)
-        assert len(res) == 4
-        assert isinstance(res[0], Shape)
-        assert is_dataclass(res[0])
+    shapes.insert_many((triangle, rectangle, pentagon, hexagon))
 
-    def test_find_by_attribute(self):
+    res = shapes.find(echo_sql=True)
+    assert len(res) == 4
+    assert isinstance(res[0], Shape)
+    assert is_dataclass(res[0])
 
-        db, shapes, chairs = self.setUp()
 
-        shapes.insert_many((triangle, rectangle, pentagon, hexagon))
+def test_find_by_attribute():
+    db, shapes, chairs = setUp()
 
-        res = shapes.find("@sides > ?", (3,), echo_sql=True, dtype=Shape)
+    shapes.insert_many((triangle, rectangle, pentagon, hexagon))
 
-        assert len(res) == 3
+    res = shapes.find("@sides > ?", (3,), echo_sql=True, dtype=Shape)
 
-        assert isinstance(res[0], Shape)
+    assert len(res) == 3
 
-    def test_find2_by_attribute(self):
+    assert isinstance(res[0], Shape)
 
-        db, shapes, chairs = self.setUp()
 
-        shapes.insert_many((triangle, rectangle, pentagon, hexagon))
+def test_find2_by_attribute():
+    db, shapes, chairs = setUp()
 
-        res = shapes.find2({"$gt": {"sides": 3}}, echo_sql=True, dtype=Shape)
+    shapes.insert_many((triangle, rectangle, pentagon, hexagon))
 
-        assert len(res) == 3
+    res = shapes.find2({"$gt": {"sides": 3}}, echo_sql=True, dtype=Shape)
 
-        assert isinstance(res[0], Shape)
+    assert len(res) == 3
 
-    def test_FindClass(self):
+    assert isinstance(res[0], Shape)
 
-        db, shapes, chairs = self.setUp()
 
-        f = Find(Shape).where("sides") > 3
-        print(f)
+def test_FindClass():
+    db, shapes, chairs = setUp()
+
+    f = Find(Shape).where("sides") > 3
+    print(f)
 
 
 if __name__ == "__main__":
-    unittest.main()
+    pytest()

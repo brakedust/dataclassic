@@ -7,7 +7,7 @@
 dataclassic
 =======================================
 
-*Currently in alpha**
+*Currently in alpbetaha**
 
 A Python library for makeing `dataclass`es even more awesome.  dataclassic brings
 
@@ -16,23 +16,29 @@ A Python library for makeing `dataclass`es even more awesome.  dataclassic bring
     * Ability to define a CLI for a program using `dataclasses`
     * [Coming soon] tables of dataclass objects
 
+I hear you like dataclasses so I put some dataclasses in your dataclasses
+
 
 Type Coercion and Validation
 ==============================
 
-
+`field` declarations can include a converter function or a validation function.  These apply only
+at object initialization, not when an attribute is set.
 
 
 (No)SQLITE Document Store
 ==============================
 
 
+
 Define your CLI with `dataclass`es
 ===================================
 
 
+
 Tables of `dataclass`es
 ==================================
+
 
 
 Examples

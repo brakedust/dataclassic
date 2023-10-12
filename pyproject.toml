@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dataclassic"
-version = "0.1.7"
+version = "0.1.8"
 description = "Making dataclasses even more awesome"
 authors = ["Brakedust <brakedust7@proton.mail>"]
 
@@ -9,6 +9,7 @@ authors = ["Brakedust <brakedust7@proton.mail>"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
+openpyxl = "^3.1.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"

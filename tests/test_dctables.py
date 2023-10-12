@@ -1,11 +1,6 @@
-from dataclassic.doc_store import DocumentStore, Database
-from dataclassic.dataclasses import (
-    dataclass,
-    field,
-    DataClassicValidationError,
-    to_json,
-    from_json,
-)
+from dataclassic import DataClassicValidationError, dataclass, field, from_json, to_json
+from dataclassic.doc_store import Database, DocumentStore
+
 
 # The validator gets the instance of the class
 def RealShapeValidator(shape: "Shape"):

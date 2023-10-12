@@ -7,9 +7,9 @@ The DataTable class is a tabular data structure with behavior similar to a panda
 """
 
 import copy
+from collections import OrderedDict
 from functools import partial
 from itertools import chain
-from collections import OrderedDict
 from string import ascii_lowercase
 
 backend = "pyarray"
@@ -17,20 +17,9 @@ backend = "pyarray"
 
 if backend == "numpy":
     try:
-        from numpy import (
-            array,
-            transpose,
-            append,
-            delete,
-            ndarray,
-            copy as array_copy,
-            min,
-            max,
-            mean,
-            sum,
-            var,
-            std,
-        )
+        from numpy import append, array
+        from numpy import copy as array_copy
+        from numpy import delete, max, mean, min, ndarray, std, sum, transpose, var
 
         array_type = ndarray
     except ImportError:
@@ -38,17 +27,17 @@ if backend == "numpy":
 
 if backend == "pyarray":
     from dataclassic.pyarray import (
-        array,
-        transpose,
         append,
+        array,
         delete,
-        pyndarray,
-        min,
         max,
         mean,
-        sum,
-        var,
+        min,
+        pyndarray,
         std,
+        sum,
+        transpose,
+        var,
     )
 
     array_type = pyndarray
@@ -109,7 +98,8 @@ def parse_primitive(s):
 
 def unique(seq):
     """
-    Gets the unique values in seq and returns a new list with these values
+    Gets the unique values in seq and returns a new list with these values.
+    Yes this is similar to a set, but it preserves order
     """
     seen = set()
     seen_add = seen.add
@@ -590,62 +580,66 @@ class DataTable(object):
             if close_file:
                 fileobj.close()
 
-    def to_excel(self, filename=None, wb=None):
-        """
-        Writes the DataTable to an excel file
-        """
-        import openpyxl
+    if False:
+        # not currently working
+        def to_excel(self, filename=None, wb=None):
+            """
+            Writes the DataTable to an excel file
+            """
+            import openpyxl
 
-        if not wb:
-            wb = openpyxl.Workbook()
+            if not wb:
+                wb = openpyxl.Workbook()
 
-        if self.name:
-            ws = wb.add_sheet(self.name)
-        else:
-            ws = wb.add_sheet("data")
+            sname = self.name if self.name else "data"
+            ws = wb.create_sheet(self.name)
+            #     wb.worksheets.append()
+            #     ws = wb.add_sheet(self.name)
+            # else:
+            #     ws = wb.add_sheet("data")
 
-        # write metadata
-        irow = 0
-        if self.name is not None:
-            ws.write(irow, 0, "__TableName__")
-            ws.write(irow, 1, self.name)
+            # write metadata
+            irow = 0
+            if self.name is not None:
+                ws.write(irow, 0, "TableName")
+                ws.write(irow, 1, self.name)
 
-        for k in self.metadata:
+            for k in self.metadata:
+                irow += 1
+                ws.write(irow, 0, "Metadata")
+                ws.write(irow, 1, k)
+                ws.write(irow, 2, self.metadata[k])
+
+            # write column names
+            # header_style = xlwt.easyxf("font: bold on; align: wrap on, vert centre, horiz center")
+            fnt = openpyxl.styles.Font()
+            fnt.bold = True
+            fnt.height = 240
+            # fnt.name = 'Calibri'
+            aln = openpyxl.styles.Alignment(horizontal="center")
+            aln.horizontal = openpyxl.styles.alignment.horizontal_alignments[2]
+            # header_style = openpyxl.styles.XFStyle()
+            # header_style.font = fnt
+            # header_style.alignment = aln
+
             irow += 1
-            ws.write(irow, 0, "__metadata__")
-            ws.write(irow, 1, k)
-            ws.write(irow, 2, self.metadata[k])
+            for i, col in enumerate(self.columns):
+                ws.append(self.columns)
 
-        # write column names
-        # header_style = xlwt.easyxf("font: bold on; align: wrap on, vert centre, horiz center")
-        fnt = openpyxl.Font()
-        fnt.bold = True
-        fnt.height = 240
-        # fnt.name = 'Calibri'
-        aln = openpyxl.Alignment()
-        aln.horz = aln.HORZ_CENTER
-        header_style = openpyxl.XFStyle()
-        header_style.font = fnt
-        header_style.alignment = aln
+            # write the data
+            for i, row in enumerate(self.data):
+                irow += 1
+                ws.write(irow, 0, self.index[i])
+                for ix, x in enumerate(row):
+                    try:
+                        ws.write(irow, ix + 1, x)
+                    except:  # nopep8
+                        ws.write(irow, ix + 1, str(x))
 
-        irow += 1
-        for i, col in enumerate(self.columns):
-            ws.write(irow, i + 1, col, style=header_style)
-
-        # write the data
-        for i, row in enumerate(self.data):
-            irow += 1
-            ws.write(irow, 0, self.index[i])
-            for ix, x in enumerate(row):
-                try:
-                    ws.write(irow, ix + 1, x)
-                except:  # nopep8
-                    ws.write(irow, ix + 1, str(x))
-
-        if filename:
-            wb.save(filename)
-        else:
-            return wb
+            if filename:
+                wb.save(filename)
+            else:
+                return wb
 
     @staticmethod
     def from_csv(fileobj, delim="\t"):
@@ -1068,6 +1062,7 @@ def sample_table():
 
 def sample_table2(ncol, nrow):
     import string
+
     from dataclassic import pyarray
 
     keys = string.ascii_lowercase[:ncol]

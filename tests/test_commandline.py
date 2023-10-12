@@ -2,19 +2,20 @@
 # from dataclasses import dataclass
 
 import sys
-from tests._test_tools import Raises
 
-from dataclassic.commandline import ParseError, command, Program, argument, dataclass
+from dataclassic.commandline import ParseError, Program, argument, command, dataclass
+from tests._test_tools import Raises
 
 # from dataclasses import fields, MISSING
 # import pytest
 prog = Program("booyeah")
 
+COMPARE_VAL = None
+
 
 @prog.command
-@dataclass
 class greet:
-    name: str = argument(doc="Name of the hero", nargs=2)
+    name: list[str] = argument(doc="Name of the hero", nargs=2)
     numbers: list[int] = argument(
         doc="favorite numbers", nargs="+"
     )  # , converter=list[int])
@@ -22,14 +23,17 @@ class greet:
     is_blue: bool = argument(is_flag=True)
 
     def execute(self, *args):
+        global COMPARE_VAL
         val = f"Hello.  {self.name[0]} {self.name[1]}'s favorite numbers are {', '.join(str(x) for x in self.numbers)} and they speak {self.language}."  # nopep8
         if self.is_blue:
             val += "\nThey are BLUE!!"
         print(val)
-        return val
+        COMPARE_VAL = val
 
 
 def test_parse_sys_argv():
+    global COMPARE_VAL
+    COMPARE_VAL = None
     _argv = sys.argv
     # sys.argv = ["cmdline", "Super", "Bot", "42","17", "19", "--language", "Spanish"]
     sys.argv = ["dummy", "greet", "Super", "Bot", 1, "2", "--language", "Spanish"]
@@ -38,10 +42,15 @@ def test_parse_sys_argv():
     # prog.parse_command_line()
     s = prog.parse_and_execute()
     sys.argv = _argv
-    assert s == "Hello.  Super Bot's favorite numbers are 1, 2 and they speak Spanish."
+    assert (
+        COMPARE_VAL
+        == "Hello.  Super Bot's favorite numbers are 1, 2 and they speak Spanish."
+    )
 
 
 def test_parse_passed_args():
+    global COMPARE_VAL
+    COMPARE_VAL = None
     # sys.argv = ["cmdline", "Super", "Bot", "42","17", "19", "--language", "Spanish"]
     args = ["greet", "Super", "Bot", 1, "2", "--language", "Spanish"]
     # cmd = greet.parse_args(args)
@@ -49,7 +58,10 @@ def test_parse_passed_args():
     # prog.parse_command_line(args)
     # s = prog.execute()
     s = prog.parse_and_execute(args)
-    assert s == "Hello.  Super Bot's favorite numbers are 1, 2 and they speak Spanish."
+    assert (
+        COMPARE_VAL
+        == "Hello.  Super Bot's favorite numbers are 1, 2 and they speak Spanish."
+    )
 
 
 def test_error():
@@ -90,4 +102,6 @@ def test_pipeline_program():
     s = prog.parse_and_execute(args)
 
 
+if __name__ == "__main__":
+    test_parse_sys_argv()
 # test_parse_passed_args()

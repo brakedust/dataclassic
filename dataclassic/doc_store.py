@@ -88,11 +88,10 @@ import sqlite3
 import uuid
 from warnings import warn
 
-from dataclassic.dataclasses import asdict, is_dataclass, from_dict
+from dataclassic.dataclasses_ext import asdict, from_dict, is_dataclass
 from dataclassic.encoders import JsonEncoder, ZlibEncoder
 from dataclassic.sql_helper import Column, Relationship, dialects
 from dataclassic.sql_helper import sqlite_dialect as dialect
-
 
 COLLECTION_SCHEMA = [
     Column(name="ID", dtype="CHAR(32)", nullable=False, primary_key=True),

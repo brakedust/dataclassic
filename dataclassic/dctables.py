@@ -1,11 +1,12 @@
 from copy import deepcopy
-from dataclassic.dataclasses import asdict
-from .tables import DataTable
-from .pyarray import pyndarray
 from typing import Callable
 
+from dataclassic.dataclasses_ext import asdict
 from dataclassic.pyarray import array, pyndarray, slice_to_range
 from dataclassic.tables import DataTable
+
+from .pyarray import pyndarray
+from .tables import DataTable
 
 array_type = pyndarray
 array_copy = deepcopy

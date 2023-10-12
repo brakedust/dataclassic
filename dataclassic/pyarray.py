@@ -1,8 +1,9 @@
-import math
 import copy
-from itertools import chain, product
-from functools import partial
 import itertools
+import math
+from functools import partial
+from itertools import chain, product
+from math import isnan, nan
 
 # def multirange_next(value_counts, counters):
 
@@ -74,57 +75,57 @@ def slice_to_range(myslice, myobj, idim=0):
         return myslice
 
 
-class NANType:
-    """
-    A not a number type.  This should not be used directly.  The module instance NAN should be used.
-    """
+# class NANType:
+#     """
+#     A not a number type.  This should not be used directly.  The module instance NAN should be used.
+#     """
 
-    instance = None
+#     instance = None
 
-    def __init__(self):
-        if NANType.instance is None:
-            NANType.instance = self
-        else:
-            raise TypeError("You cannot create a NANType instance.\nUse the NAN object")
+#     def __init__(self):
+#         if NANType.instance is None:
+#             NANType.instance = self
+#         else:
+#             raise TypeError("You cannot create a NANType instance.\nUse the NAN object")
 
-    def __str__(self):
-        return "NaN"
+#     def __str__(self):
+#         return "NaN"
 
-    def __repr__(self):
-        return "NAN"
+#     def __repr__(self):
+#         return "NAN"
 
-    def __eq__(self, other):
-        return False
+#     def __eq__(self, other):
+#         return False
 
-    def __ne__(self, other):
-        return True
+#     def __ne__(self, other):
+#         return True
 
-    def __lt__(self, other):
-        return False
+#     def __lt__(self, other):
+#         return False
 
-    def __gt__(self, other):
-        return False
+#     def __gt__(self, other):
+#         return False
 
-    def __lte__(self, other):
-        return False
+#     def __lte__(self, other):
+#         return False
 
-    def __gte__(self, other):
-        return False
+#     def __gte__(self, other):
+#         return False
 
-    def __len__(self):
-        return 0
-
-
-if NANType.instance is None:
-    NANType()
-
-NAN = NANType.instance
-NaN = NAN
-nan = NAN
+#     def __len__(self):
+#         return 0
 
 
-def isnan(x):
-    return x in (NAN, None)
+# if NANType.instance is None:
+#     NANType()
+
+# NAN = NANType.instance
+# NaN = NAN
+# nan = NAN
+
+
+# def isnan(x):
+#     return x in (NAN, None)
 
 
 def eq(x, y):
@@ -543,7 +544,7 @@ class pyndarray:
                     newobj[indexes] /= other
                 except ZeroDivisionError as ex:
                     if self.allow_nan:
-                        newobj[indexes] = NAN
+                        newobj[indexes] = nan
                     else:
                         raise ex
         else:
@@ -552,7 +553,7 @@ class pyndarray:
                     newobj[indexes] /= other[indexes]
                 except ZeroDivisionError as ex:
                     if self.allow_nan:
-                        newobj[indexes] = NAN
+                        newobj[indexes] = nan
                     else:
                         raise ex
 
@@ -747,7 +748,7 @@ class pyndarray:
         return self.apply_func(sum, axis)
 
     def __and__(self, other):
-        result = pyndarray(shape=self.shape, fill=NAN)
+        result = pyndarray(shape=self.shape, fill=nan)
 
         for indexes in multirange(*self.shape):
             result[indexes] = self[indexes] and other[indexes]

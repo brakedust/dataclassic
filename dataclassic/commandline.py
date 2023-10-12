@@ -34,14 +34,15 @@ Example:
 """
 import sys
 from functools import wraps
-from dataclassic.dataclasses import (
-    fields,
-    Field,
-    MISSING,
+
+from dataclassic.dataclasses_ext import (
     JSON_SCHEMA_TYPES,
-    get_schema_type,
+    MISSING,
+    Field,
     dataclass,
     field_,
+    fields,
+    get_schema_type,
 )
 
 
@@ -67,7 +68,6 @@ def argument(
     is_flag=False,
     alias=None,
 ) -> Field:
-
     metadata_ = {}  # if metadata is None else metadata
     if metadata:
         metadata_.update(metadata)
@@ -104,7 +104,6 @@ def argument(
 
 class Program:
     def __init__(self, name="", pipeline=False):
-
         self.name = name
         self.is_pipline_program = pipeline
         self.commands = {}
@@ -119,7 +118,6 @@ class Program:
         # self.commands[cls.name] = cls
 
     def parse_command_line(self, args=None):
-
         exec_stack = []
         # names = [cmd.__name__ for cmd in self._commands]
         if not args:
@@ -128,25 +126,18 @@ class Program:
         # print(f"{sys.argv=}")
         # print(f"{args=}")
 
-        if not args:
+        if not args or (args[0].lower() in ("-h", "--help")):
             # no arguments supplied in any way
-            print(f"program: {self.name}")
-            print("Available subcommands:")
-            print("----------------------")
-            for cmd in self.commands:
-                print(cmd)
-
+            self.print_help()
             return exec_stack
 
         # exec_stack = []
         lenargs = len(args)
         for iarg, arg in enumerate(args):
-
             if arg in self.commands.keys():
                 exec_stack.append([iarg, arg, self.commands[arg]])
 
         for i, cmd_info in enumerate(exec_stack):
-
             start_arg = cmd_info[0]
             end_arg = -1 if (i == len(exec_stack) - 1) else exec_stack[i + 1][0]
             if end_arg >= 0:
@@ -161,7 +152,6 @@ class Program:
             print(f"{i:00d}: {cmd_info[2]}")
 
     def execute(self, exec_stack):
-
         values = None
         for i, cmd_info in enumerate(exec_stack):
             if self.is_pipline_program:
@@ -172,7 +162,6 @@ class Program:
         return values
 
     def parse_and_execute(self, args=None):
-
         stack = self.parse_command_line(args)
 
         if "-h" in sys.argv or "--help" in sys.argv:
@@ -180,6 +169,13 @@ class Program:
 
         if stack:
             return self.execute(stack)
+
+    def print_help(self):
+        print(f"program: {self.name}")
+        print("Available subcommands:")
+        print("----------------------")
+        for cmd in self.commands:
+            print(cmd)
 
 
 def make_alias(f: Field, opt: dict[str, Field]):
@@ -189,13 +185,15 @@ def make_alias(f: Field, opt: dict[str, Field]):
     options dictionary
     """
     alias = f.metadata.get("alias", None)
-    if alias:
-        opt[alias] = f
+    if not alias:
+        alias = "-" + f.metadata["shell_name"].strip("-")[0]
+
+    if alias in opt:
+        return
+    elif alias == "-h":
+        return
     else:
-        maybe_alias = "-" + f.metadata["shell_name"].strip("-")[0]
-        if maybe_alias not in opt:
-            opt[maybe_alias] = f
-            f.metadata["alias"] = maybe_alias
+        opt[alias] = f
 
 
 def command(cls: type = None, *, name=None, program=None):
@@ -309,7 +307,6 @@ def command(cls: type = None, *, name=None, program=None):
                     inargs = []
             elif nargs in ("+",):
                 if len(inargs) == 0:
-
                     raise ParseError(
                         f"No arguments specified for argument [{f.name}] in "
                         + f"command [{cls.__name__}] which requires at least one"

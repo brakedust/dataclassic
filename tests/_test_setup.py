@@ -1,9 +1,16 @@
 import unittest
+
+from dataclassic import (
+    Database,
+    DataClassicValidationError,
+    DocumentStore,
+    dataclass,
+    field,
+)
 from tests._test_tools import Raises
 
 # from dataclasses import dataclass
-from dataclassic.doc_store import DocumentStore, Database
-from dataclassic.dataclasses import dataclass, field, DataClassicValidationError
+
 
 db = Database("sqlite:///:memory:")
 
