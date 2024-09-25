@@ -181,8 +181,13 @@ class Program:
     def print_help(self):
         print(f"program: {self.name}")
         print("Available subcommands:")
-        for cmd in self.commands:
-            print(f"    {cmd}")
+        for cmd_name, cmd in self.commands.items():
+            if cmd.__doc__:
+                quick_doc_string = cmd.__doc__.replace("\n", " ")[:80].strip()
+                print_str = f"    {cmd_name} -- {quick_doc_string}"
+            else:
+                print_str = f"    {cmd_name}"
+            print(print_str)
 
 
 def make_alias(f: Field, opt: dict[str, Field]):
