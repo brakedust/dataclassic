@@ -32,17 +32,18 @@ Example:
 
 
 """
+
 import sys
 from functools import wraps
-
+import textwrap
 from dataclassic.dataclasses_ext import (
-    JSON_SCHEMA_TYPES,
     MISSING,
     Field,
     dataclass,
     field_,
     fields,
     get_schema_type,
+    is_generic_container,
 )
 
 
@@ -67,6 +68,7 @@ def argument(
     nargs=1,
     is_flag=False,
     alias=None,
+    positional=False,
 ) -> Field:
     metadata_ = {}  # if metadata is None else metadata
     if metadata:
@@ -82,6 +84,7 @@ def argument(
     metadata_["exclude_from_tree"] = exclude_from_tree
     metadata_["nargs"] = nargs
     metadata_["is_flag"] = is_flag
+    metadata_["positional"] = positional
 
     if is_flag and default is MISSING:
         default = False
@@ -113,7 +116,12 @@ class Program:
         self.settings = None
 
     def command(self, cls: type = None, *, name=None):
-        """This is a decorator"""
+        """
+        This is a decorator
+
+        cls is the command class to which this decorator is applied
+        """
+
         return command(cls, name=name, program=self)
         # self.commands[cls.name] = cls
 
@@ -134,8 +142,8 @@ class Program:
         # exec_stack = []
         lenargs = len(args)
         for iarg, arg in enumerate(args):
-            if arg in self.commands.keys():
-                exec_stack.append([iarg, arg, self.commands[arg]])
+            if arg.lower() in self.commands.keys():
+                exec_stack.append([iarg, arg, self.commands[arg.lower()]])
 
         for i, cmd_info in enumerate(exec_stack):
             start_arg = cmd_info[0]
@@ -173,9 +181,8 @@ class Program:
     def print_help(self):
         print(f"program: {self.name}")
         print("Available subcommands:")
-        print("----------------------")
         for cmd in self.commands:
-            print(cmd)
+            print(f"    {cmd}")
 
 
 def make_alias(f: Field, opt: dict[str, Field]):
@@ -200,13 +207,11 @@ def command(cls: type = None, *, name=None, program=None):
     """
     Decorator to make a dataclass parse command line arguments
 
-    @command
-    @dataclass
+    @myprogram.command
     def do_something:
         pass
 
-    @command(name="do-something")
-    @dataclass
+    @myprogram.command(name="do-something", description="It does something")
     def do_something:
         pass
     """
@@ -223,11 +228,10 @@ def command(cls: type = None, *, name=None, program=None):
     cls = dataclass(cls)
 
     cls.name = name if name else cls.__name__
-
     # if not hasattr(cls, "__post_init__"):
     # cls = post_init_coersion(cls)
 
-    program.commands[cls.name] = cls
+    program.commands[cls.name.lower()] = cls
 
     cls._options = {}
     cls._arguments = []
@@ -288,9 +292,7 @@ def command(cls: type = None, *, name=None, program=None):
         for arg in inargs:
             if isinstance(arg, str) and arg.startswith("-"):
                 found_unknown_arg = True
-                errs.append(
-                    f"Unknown argument [{arg}] found in command [{cls.__name__}]"
-                )
+                errs.append(f"Unknown argument [{arg}] found in command [{cls.__name__}]")
 
         if found_unknown_arg:
             raise ParseError("\n".join(errs))
@@ -330,34 +332,63 @@ def command(cls: type = None, *, name=None, program=None):
 
     @classmethod
     def help(cls):
+        def get_count(ff):
+            nargs = ff.metadata.get("nargs", 1)
+            if isinstance(nargs, int):
+                return nargs
+            elif isinstance(nargs, str):
+                if nargs == "+":
+                    return "one or more"
+                elif nargs == "*":
+                    return "zero or more"
+            return "undetermined"
+
+        header = []
         text = []
-        text.append(f"{cls.name}")
+
+        header.append(f"Subcommand: {cls.name}")
+        if cls.__doc__:
+            header.append(cls.__doc__.strip("\n"))
+
         text.append("\nPositional Arguments\n--------------------")
         for f in cls._arguments:
-            text.append(
-                f"{f.name} \n    type = {get_schema_type(f.type)}\n"
-                + f"    count = {f.metadata.get('nargs',1)}"
-            )
+            if is_generic_container(f.type):
+                text.append(
+                    f"{f.name} \n    type = {get_schema_type(f.type.__args__[-1])}\n" + f"    count = {get_count(f)}"
+                )
+            else:
+                text.append(f"{f.name} \n    type = {get_schema_type(f.type)}\n" + f"    count = {get_count(f)}")
+            if doc := f.metadata.get("doc"):
+                text.append(f"    Desciption = {doc}")
 
         text.append("\nOptions\n--------------------")
         for f in set(cls._options.values()):
             shell_name = f.metadata["shell_name"]
             alias = f.metadata.get("alias", None)
+
             if alias:
                 name = f"{shell_name}/{alias}"
             else:
                 name = shell_name
+
             if f.metadata.get("is_flag", False):
+                text.append(f"{name} \n    type = boolean flag\n    default = {f.default}")
+            elif is_generic_container(f.type):
                 text.append(
-                    f"{name} \n    type = boolean flag\n    default = {f.default}"
+                    f"{name} \n    type = {get_schema_type(f.type)} of {get_schema_type(f.type.__args__[-1])}\n"
+                    + f"    count = {get_count(f)}\n    default = {f.default}"
                 )
             else:
                 text.append(
-                    f"{name} \n    type = {JSON_SCHEMA_TYPES[f.type]}\n"
-                    + f"    count = {f.metadata.get('nargs', 1)}\n    default = {f.default}"
+                    f"{name} \n    type = {get_schema_type(f.type)}\n"
+                    + f"    count = {get_count(f)}\n    default = {f.default}"
                 )
 
-        return "\n".join(text)
+            if doc := f.metadata.get("doc"):
+                text.append(f"    Desciption = {doc}")
+
+        return "\n".join(header) + textwrap.indent("\n".join(text), "    ")
+        # return "\n".join(text)
 
     cls.parse_args = parse_args
     cls.help = help
