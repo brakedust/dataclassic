@@ -32,10 +32,11 @@ class greet:
         COMPARE_VAL = val
 
 
+print("\n----------------------------\n")
 sys.argv = [Path(__file__).name, "greet", "Paul", "Bunyan", "1", "30"]
 
 prog.print_parsed_command_line(prog.parse_command_line())
-
+print("\n----------------------------\n")
 sys.argv = [Path(__file__).name, "GreeT", "--help"]
 prog.parse_and_execute()
 
@@ -45,4 +46,8 @@ prog.parse_and_execute()
 
 print("\n----------------------------\n")
 sys.argv = [Path(__file__).name]
+prog.parse_and_execute()
+
+print("\n----------------------------\n")
+sys.argv = [Path(__file__).name, "greet", "Paul", "Bunyan", "1", "30"]
 prog.parse_and_execute()

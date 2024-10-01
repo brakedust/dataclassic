@@ -246,16 +246,16 @@ def command(cls: type = None, *, name=None, program=None):
 
         if f.metadata.get("is_flag", False):
             f.metadata["nargs"] = 0
-            f.metadata["shell_name"] = f"--{f.name}"
+            f.metadata["shell_name"] = f"--{f.name.replace('_','-')}"
             cls._options[f.metadata["shell_name"]] = f
             make_alias(f, cls._options)
 
         elif f.default != MISSING:
-            f.metadata["shell_name"] = f"--{f.name}"
+            f.metadata["shell_name"] = f"--{f.name.replace('_','-')}"
             cls._options[f.metadata["shell_name"]] = f
             make_alias(f, cls._options)
         else:
-            f.metadata["shell_name"] = f.name
+            f.metadata["shell_name"] = f.name.replace("_", "-")
             cls._arguments.append(f)
 
     @classmethod
@@ -304,7 +304,7 @@ def command(cls: type = None, *, name=None, program=None):
 
         # ----------------------
         # Handle positional arguments
-        print(inargs)
+        # print(inargs)
         args = []
         for f in cls._arguments:
             nargs = f.metadata.get("nargs", 1)
